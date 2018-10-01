@@ -1,0 +1,477 @@
+---
+title: "Lasso"
+author: "Shuofan Zhang"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: pdf_document
+---
+
+## Some notes
+
+Given the data set we use (Stock & Watson 2016), when thresh=1E-16, the difference in sum of squared errors between OLS and Lasso ($\lambda=0$) is 1.81e-06, while when thresh=1E-7, the difference is 0.005. But the difference when $\lambda$ is nonzero is not very significant, so to reduce the computational burden, we choose to use 1E-10 with the maxit (maximum number of passes over the data for all lambda values) to be 10^9. 
+
+All the monthly data was aggregated into quarterly data. 
+
+Each series was standardized (centered, sd=1) before put into regression.
+
+118 series were transformed by log().
+
+```{r, include=T, echo=F, warning=F, 	message = FALSE}
+library("glmnet")
+library("reshape2")
+library("cellranger")
+library("tidyverse")
+library("knitr")
+library("ggrepel")
+library("pander")
+source("/Users/stanza/desktop/lasso_r/fun.R")
+```
+
+```{r, include=T, echo=F, warning=F, 	message = FALSE}
+# read data
+bpraw <- read.csv("/Users/stanza/desktop/lasso_r/bpraw.csv") 
+bptrans <- read.csv("/Users/stanza/desktop/lasso_r/bptrans.csv", na.strings = NaN)
+tcode <- read.csv("/Users/stanza/desktop/lasso_r/tcode.csv", stringsAsFactors = F) 
+short <- read.csv("/Users/stanza/desktop/lasso_r/short.csv", stringsAsFactors = F) %>% unname()
+long <- read.csv("/Users/stanza/desktop/lasso_r/long.csv", stringsAsFactors = F) %>% unname()
+# need to remove the copyright symbol from the long.csv
+idx <- apply(bpraw, 2, anyNA) %>% which() %>% unname()
+colnames(bpraw) = short
+colnames(bptrans) = short
+bpraw <- bpraw[ , -idx]
+bptrans <- bptrans[, -idx] %>% na.omit()
+tcode <- tcode[-idx,] 
+short <- short[, -idx] %>% t() %>% as.vector()
+long <- long[, -idx] %>% t() %>% as.vector()
+```
+
+
+## Part I: Lasso 1
+
+In the sections following, 
+
+the regression being estimated is:
+$$\Delta y_t = \beta_0 
++ \beta_1 \ I(0)_{t-1}
++ \beta_2 \ I(1)_{t-1}
++ \beta_3 \ \Delta I(2)_{t-1}$$
+
+1, 144 series were used as explanatory variables; 
+
+2, I(2) series were first differenced, no change to I(0) and I(1) series;
+
+3, GDP growth rate is used as the dependent variable;
+$$\Delta y_t = log(GDP_{t}) - log(GDP_{t-1})$$
+
+4, all explanatory variables are lagged by 1 quarter;
+
+5, after first difference and one lag, we have 222 observations (lost 2).
+
+
+```{r, include=T, message=F, warning=F, echo=F}
+# clean data
+maxlag.1 = 1
+d.log.gdp <- bpraw[,1] %>% log() %>% diff() #%>% as.data.frame()# (2-224=223)
+y.1 <- lag0(maxlag.1 , d.log.gdp) %>% scale() # dependent variable (3-224=222), done
+x <- bpraw[, -1] %>% data.matrix()
+x.tcode = tcode[-1] 
+lambda.seq1 <- seq(0.5, 0, -0.0025)
+```
+
+```{r, echo=F, include=T, warning=F, message=F}
+# log() transformation
+x[ , x.tcode==5 | x.tcode==6] = log( x[ , x.tcode==5 | x.tcode==6] )
+# first difference
+xtem.1 = x[-1,] # tem (2-224=223)
+xtem.1[ , x.tcode==6] <- diff( x[ , x.tcode==6] ) 
+x.1 = lag1(maxlag.1 , xtem.1) %>% scale() # explanatory variables (2-223=222), done
+p.1 = dim(x.1)[2]
+n.1 = dim(x.1)[1]
+lambda.fix.1 = sqrt(log( p.1 ) / n.1 )
+```
+
+```{r, echo=T}
+lambda.fix.1
+```
+
+```{r echo=F, message=F, warning=F}
+# fit model, collect data
+lasso.1 = glmnet(x.1, y.1, alpha=1, thresh=1E-10, lambda= lambda.seq1, maxit = 10^9)
+trace1 = trace.plot.table(lasso.1, lambda.seq1, lambda.fix.1)
+```
+
+```{r echo=F, message=F, warning=F}
+# plot
+plot1 = trace1$plot + ylim(-1, 1) + labs(subtitle = "y is truncated to (-1, 1)")
+plot1
+```
+
+```{r, echo=T, eval=T}
+# table
+table1 = trace1$table
+table1
+```
+
+## Part II: Lasso 2
+
+In the sections following, 
+
+the regression being estimated is:
+$$ 
+\begin{split} 
+\Delta y_t &= \beta_0 
++ \beta_1 \ y_{t-1}
++ \beta_2 \ \Delta y_{t-1}
++ \beta_3 \ \Delta y_{t-2} \\
+&+ \beta_4 \ \Delta y_{t-3}
++ \beta_5 \ \Delta y_{t-4}
++ \beta_6 \ I(0)_{t-1}  \\
+&+ \beta_7 \ I(1)_{t-1}
++ \beta_8 \  \Delta I(2)_{t-1}
+\end{split} 
+$$ 
+
+1, 149 series were used as explanatory variables, $log(GDP_{t-1}) \ \Delta log(GDP_{t-1}) \ \Delta log(GDP_{t-2}) \ \Delta log(GDP_{t-3}) \ \Delta log(GDP_{t-4})$ were added on the top of the Lasso 1;
+
+2, I(2) series were first differenced;
+
+3, GDP growth rate is used as the dependent variable;
+$$\Delta y_t = log(GDP_{t}) - log(GDP_{t-1})$$
+
+3, all explanatory variables are lagged by 1 quarter;
+
+4, after first difference and four lags, we have 219 observations (lost 5);
+
+
+```{r, include=T, message=F, warning=F, echo=F}
+# create data
+maxlag.2=4
+y.2 <- lag0(maxlag.2 , d.log.gdp) %>% scale() # dependent variable, done
+log.gdp.lag1 <- lag1(maxlag.2 , log(bpraw[-1 , 1]))  
+d.log.gdp.lags <- lags(maxlag.2 , d.log.gdp)   
+xtem.2 <- lag1(maxlag.2 , xtem.1) # x.2 (5 to 223)
+x.2 = cbind(log.gdp.lag1, d.log.gdp.lags, xtem.2) %>% scale() # explanatory variable, done
+lambda.seq2 = lambda.seq1
+p.2 = dim(x.2)[2]
+n.2 = dim(x.2)[1]
+lambda.fix.2 = sqrt(log( p.2 ) / n.2 )
+```
+
+```{r, echo=T}
+lambda.fix.2
+```
+
+```{r echo=F, message=F, warning=F}
+# fit model, collect data
+lasso.2 = glmnet(x.2, y.2, alpha=1, thresh=1E-10, lambda= lambda.seq2, maxit = 10^9)
+trace2 = trace.plot.table(lasso.2, lambda.seq2, lambda.fix.2)
+```
+
+```{r echo=F, message=F, warning=F}
+# plot
+plot2 = trace2$plot + ylim(-1, 1) + labs(subtitle = "y is truncated to (-1, 1)")
+plot2
+```
+
+```{r, echo=T, eval=T}
+# table
+table2 = trace2$table
+table2
+```
+
+## Part III: Lasso 3
+
+Some notes: in this section, the number of parameters exceeds the number of observations, but glmnet still works when $\lambda=0$ (why), and "lm" also works unless we set "singular.ok = FALSE".
+
+In the sections following, 
+
+the regression being estimated is:
+$$ 
+\begin{split} 
+\Delta y_t &= \beta_0 
++ \beta_1 \ y_{t-1}
++ \beta_2 \ \Delta y_{t-1}
++ \beta_3 \ \Delta y_{t-2} \\
+&+ \beta_4 \ \Delta y_{t-3} 
++ \beta_5 \ \Delta y_{t-4}
++ \beta_6 \ I(0)_{t-1} + \beta_7 \ I(0)_{t-2} \\
+&+ \beta_8 \ I(0)_{t-3} + \beta_9 \ I(0)_{t-4} 
+\end{split} 
+$$ 
+
+1, 581 (1+4*145) series were used as explanatory variables; 
+
+I(1) series were first-differenced;
+
+I(2) series were second-differenced;
+
+2, all explanatory variables are now I(0) and lagged by 4 quarters;
+
+3, after first difference, second difference and four lags, we have 218 observations (lost 6).
+
+```{r, include=T, message=F, warning=F, echo=F}
+# create data
+maxlag.3 = 4
+xtem.3 = lags(maxlag.3 , bptrans)
+y.lag1.3 = lag1(maxlag.3 , log(bpraw[-(1:2) , 1]) )
+x.3 = cbind(y.lag1.3 , xtem.3) %>% scale()
+y.3 = lag0(maxlag.3 , bptrans[,1] ) %>% scale()
+lambda.seq3 = seq(0.6, 0.001, -0.002995)
+p.3 = dim(x.3)[2]
+n.3 = dim(x.3)[1]
+lambda.fix.3 = sqrt(log( p.3 ) / n.3 )
+```
+
+```{r, echo=T}
+lambda.fix.3
+```
+
+```{r echo=F, message=F, warning=F}
+# fit model, collect data
+lasso.3 = glmnet(x.3, y.3, alpha=1, thresh=1E-10, lambda= lambda.seq3, maxit = 10^9)
+trace3 = trace.plot.table(lasso.3, lambda.seq3, lambda.fix.3)
+```
+
+```{r echo=F, message=F, warning=F}
+# plot
+plot3 = trace3$plot
+plot3
+```
+
+```{r, echo=T, eval=T}
+# table
+table3 = trace3$table
+table3
+```
+
+
+## Part IV: Lasso 4
+
+In the sections following, 
+
+the regression being estimated is:
+$$ 
+\begin{split} 
+\Delta y_t =& \beta_0 
++ \beta_1 \ y_{t-1}
++ \beta_2 \ \Delta y_{t-1}
++ \beta_3 \ \Delta y_{t-2} 
++ \beta_4 \ \Delta y_{t-3} \\
+&+ \beta_5 \ I(0)_{t-1} 
++ \beta_6 \ I(0)_{t-2} 
++ \beta_7 \ I(0)_{t-3} 
+\end{split} 
+$$ 
+
+1, 436 (1+3*145) series were used as explanatory variables; 
+
+I(1) series were first-differenced;
+
+I(2) series were second-differenced;
+
+2, all explanatory variables are now I(0) and lagged by 3 quarters;
+
+3, after first difference, second difference and 3 lags, we have 219 observations (lost 5).
+
+```{r, include=T, message=F, warning=F, echo=F}
+# create data
+maxlag.4 = 3
+xtem.4 = lags(maxlag.4 , bptrans)
+y.lag1.4 = lag1(maxlag.4 , log(bpraw[-(1:2) , 1]) )
+x.4 = cbind(y.lag1.4 , xtem.4) %>% scale()
+y.4 = lag0(maxlag.4 , bptrans[,1] ) %>% scale()
+lambda.seq4 = seq(0.6, 0.001, -0.002995)
+p.4 = dim(x.4)[2]
+n.4 = dim(x.4)[1]
+lambda.fix.4 = sqrt(log( p.4 ) / n.4 )
+```
+
+```{r, echo=T}
+lambda.fix.4
+```
+
+```{r echo=F, message=F, warning=F}
+# fit model, collect data
+lasso.4 = glmnet(x.4, y.4, alpha=1, thresh=1E-10, lambda= lambda.seq4, maxit = 10^9)
+trace4 = trace.plot.table(lasso.4, lambda.seq4, lambda.fix.4)
+```
+
+```{r echo=F, message=F, warning=F}
+# plot
+plot4 = trace4$plot
+plot4
+```
+
+```{r, echo=T, eval=T}
+# table
+table4 = trace4$table
+table4
+```
+
+## Part V: Lasso 5
+
+In the sections following, 
+
+the regression being estimated is:
+$$ 
+\begin{split} 
+\Delta y_t =& \beta_0 
++ \beta_1 \ y_{t-1}
++ \beta_2 \ \Delta y_{t-1}
++ \beta_3 \ \Delta y_{t-2} 
++ \beta_4 \ I(0)_{t-1} 
++ \beta_5 \ I(0)_{t-2} 
+\end{split} 
+$$ 
+
+1, 291 (1+2*145) series were used as explanatory variables; 
+
+I(1) series were first-differenced;
+
+I(2) series were second-differenced;
+
+2, all explanatory variables are now I(0) and lagged by 2 quarters;
+
+3, after first difference, second difference and 2 lags, we have 219 observations (lost 5).
+
+```{r, include=T, message=F, warning=F, echo=F}
+# create data
+maxlag.5 = 2
+xtem.5 = lags(maxlag.5 , bptrans)
+y.lag1.5 = lag1(maxlag.5 , log(bpraw[-(1:2) , 1]) )
+x.5 = cbind(y.lag1.5 , xtem.5) %>% scale()
+y.5 = lag0(maxlag.5 , bptrans[,1] ) %>% scale()
+lambda.seq5 = seq(0.6, 0.001, -0.002995)
+p.5 = dim(x.5)[2]
+n.5 = dim(x.5)[1]
+lambda.fix.5 = sqrt(log( p.5 ) / n.5 )
+```
+
+```{r, echo=T}
+lambda.fix.5
+```
+
+```{r echo=F, message=F, warning=F}
+# fit model, collect data
+lasso.5 = glmnet(x.5, y.5, alpha=1, thresh=1E-10, lambda= lambda.seq5, maxit = 10^9)
+trace5 = trace.plot.table(lasso.5, lambda.seq5, lambda.fix.5)
+```
+
+```{r echo=F, message=F, warning=F}
+# plot
+plot5 = trace5$plot
+plot5
+```
+
+```{r, echo=T, eval=T}
+# table
+table5 = trace5$table
+table5
+```
+
+## Part VI: Lasso 6
+
+In the sections following, 
+
+the regression being estimated is:
+$$ 
+\begin{split} 
+\Delta y_t =& \beta_0 
++ \beta_1 \ y_{t-1}
++ \beta_2 \ \Delta y_{t-1}
++ \beta_3 \ I(0)_{t-1} 
+\end{split} 
+$$ 
+
+1, 146 (1+145) series were used as explanatory variables; 
+
+I(1) series were first-differenced;
+
+I(2) series were second-differenced;
+
+2, all explanatory variables are now I(0) and lagged by 1 quarters;
+
+3, after first difference, second difference and 1 lag, we have 221 observations (lost 3).
+
+```{r, include=T, message=F, warning=F, echo=F}
+# create data
+maxlag.6 = 1
+xtem.6 = lags(maxlag.6 , bptrans)
+y.lag1.6 = lag1(maxlag.6 , log(bpraw[-(1:2) , 1]) )
+x.6 = cbind(y.lag1.6 , xtem.6) %>% scale()
+y.6 = lag0(maxlag.6 , bptrans[,1] ) %>% scale()
+lambda.seq6 = seq(0.6, 0.001, -0.002995)
+p.6 = dim(x.6)[2]
+n.6 = dim(x.6)[1]
+lambda.fix.6 = sqrt(log( p.6 ) / n.6 )
+```
+
+```{r, echo=T}
+lambda.fix.6
+```
+
+```{r echo=F, message=F, warning=F}
+# fit model, collect data
+lasso.6 = glmnet(x.6, y.6, alpha=1, thresh=1E-10, lambda= lambda.seq6, maxit = 10^9)
+trace6 = trace.plot.table(lasso.6, lambda.seq6, lambda.fix.6)
+```
+
+```{r echo=F, message=F, warning=F}
+# plot
+plot6 = trace6$plot
+plot6
+```
+
+```{r, echo=T, eval=T}
+# table
+table6 = trace6$table
+table6
+```
+
+
+
+## Part VII: Data transformation table
+
+```{r, results='asis', echo=F, warning=F, message=F, eval=T}
+t.data <- tibble(tcode, short, long) 
+
+t1 <- t.data[t.data$tcode==1, ] 
+t2 <- t.data[t.data$tcode==2, ] 
+t3 <- t.data[t.data$tcode==3, ] 
+t4 <- t.data[t.data$tcode==4, ] 
+t5 <- t.data[t.data$tcode==5, ] 
+t6 <- t.data[t.data$tcode==6, ] 
+
+t1[,1] <- c("I(0)") 
+t2[,1] <- c("I(1)")
+t5[,1] <- c("log, I(1)")
+t6[,1] <- c("log, I(2)")
+
+pander(t1, justify = 'left', caption = "Number of series with 'No-transformation' is 12",
+       split.cells = c(5, 5, 40)) 
+pander(t2, justify = 'left', caption = "Number of 'First-differenced' series is 15",
+       split.cells = c(5, 5, 40)) 
+pander(t5, justify = 'left', caption = "Number of 'First-differenced in logs' series is 86",
+       split.cells = c(5, 5, 40)) 
+pander(t6, justify = 'left', caption = "Number of 'Second-differenced in logs' series is 32",
+       split.cells = c(5, 5, 40)) 
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
