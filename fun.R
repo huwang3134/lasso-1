@@ -32,6 +32,7 @@ lag0 <- function(maxlag, y){
   }
   else {
     yt = y[((maxlag + 1) : (dim(y)[1])) , ]
+    colnames(yt) = colnames(y)
   }
   return(yt)
 }
@@ -44,8 +45,8 @@ lag1<- function(maxlag, y){
   }
   else {
     yt = y[( (maxlag) : (dim(y)[1]-1) ) , ]
+    colnames(yt) = paste0( colnames(y) , ".lag1")
   }
-  
   return(yt)
 }
 
@@ -62,7 +63,7 @@ lag1<- function(maxlag, y){
 
 trace.plot.table <- function(model, lambda.seq, lambda.fix) {
   plot.lasso <- rbind(lambda.seq, coef(model)[-1,]) %>% t() %>%
-    as.matrix() %>% as.data.frame()
+    as.matrix() %>% as.data.frame(stringsAsFactors = F)
   colnames(plot.lasso)[1] <- "lambda"
   melt.lasso <- melt(plot.lasso, id = "lambda")
   coef.fix <- subset(melt.lasso, lambda == 
@@ -78,7 +79,7 @@ trace.plot.table <- function(model, lambda.seq, lambda.fix) {
     ggtitle("Coeffcients trace plot") 
   table = kable(coef.fix[,(2:3)],
                 caption = "Non-zero Coefficients with fixed lambda")
-  list = list("plot"=plot, "table"= table)
+  list = list("plot"=plot, "table"= table, "coef" = coef.fix)
   return(list)
 }
 

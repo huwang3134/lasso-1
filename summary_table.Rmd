@@ -1,0 +1,12 @@
+---
+title: "Summary"
+author: ""
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: pdf_document
+classoption: landscape
+---
+
+```{r, echo=F, message=F}
+sum.table = readRDS(file =  "/Users/stanza/documents/github/lasso/sum_table.rds")
+pander::pander(sum.table, justify = "left" , split.table = Inf , emphasize.italics.rows = (1:4))
+```

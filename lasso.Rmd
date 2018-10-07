@@ -23,16 +23,17 @@ library("tidyverse")
 library("knitr")
 library("ggrepel")
 library("pander")
-source("/Users/stanza/desktop/lasso_r/fun.R")
+library("kableExtra")
+source("/Users/stanza/documents/github/lasso/fun.R")
 ```
 
 ```{r, include=T, echo=F, warning=F, 	message = FALSE}
 # read data
-bpraw <- read.csv("/Users/stanza/desktop/lasso_r/bpraw.csv") 
-bptrans <- read.csv("/Users/stanza/desktop/lasso_r/bptrans.csv", na.strings = NaN)
-tcode <- read.csv("/Users/stanza/desktop/lasso_r/tcode.csv", stringsAsFactors = F) 
-short <- read.csv("/Users/stanza/desktop/lasso_r/short.csv", stringsAsFactors = F) %>% unname()
-long <- read.csv("/Users/stanza/desktop/lasso_r/long.csv", stringsAsFactors = F) %>% unname()
+bpraw <- read.csv("/Users/stanza/documents/github/lasso/bpraw.csv") 
+bptrans <- read.csv("/Users/stanza/documents/github/lasso/bptrans.csv", na.strings = NaN)
+tcode <- read.csv("/Users/stanza/documents/github/lasso/tcode.csv", stringsAsFactors = F) 
+short <- read.csv("/Users/stanza/documents/github/lasso/short.csv", stringsAsFactors = F) %>% unname()
+long <- read.csv("/Users/stanza/documents/github/lasso/long.csv", stringsAsFactors = F) %>% unname()
 # need to remove the copyright symbol from the long.csv
 idx <- apply(bpraw, 2, anyNA) %>% which() %>% unname()
 colnames(bpraw) = short
@@ -75,6 +76,8 @@ y.1 <- lag0(maxlag.1 , d.log.gdp) %>% scale() # dependent variable (3-224=222), 
 x <- bpraw[, -1] %>% data.matrix()
 x.tcode = tcode[-1] 
 lambda.seq1 <- seq(0.5, 0, -0.0025)
+trans.1 = "1 less differenced"
+vecm.1 = FALSE
 ```
 
 ```{r, echo=F, include=T, warning=F, message=F}
@@ -154,6 +157,8 @@ lambda.seq2 = lambda.seq1
 p.2 = dim(x.2)[2]
 n.2 = dim(x.2)[1]
 lambda.fix.2 = sqrt(log( p.2 ) / n.2 )
+trans.2 = "1 less differenced"
+vecm.2 = TRUE
 ```
 
 ```{r, echo=T}
@@ -219,6 +224,8 @@ lambda.seq3 = seq(0.6, 0.001, -0.002995)
 p.3 = dim(x.3)[2]
 n.3 = dim(x.3)[1]
 lambda.fix.3 = sqrt(log( p.3 ) / n.3 )
+trans.3 = "All stationary"
+vecm.3 = TRUE
 ```
 
 ```{r, echo=T}
@@ -283,6 +290,8 @@ lambda.seq4 = seq(0.6, 0.001, -0.002995)
 p.4 = dim(x.4)[2]
 n.4 = dim(x.4)[1]
 lambda.fix.4 = sqrt(log( p.4 ) / n.4 )
+trans.4 = "All stationary"
+vecm.4 = TRUE
 ```
 
 ```{r, echo=T}
@@ -344,6 +353,8 @@ lambda.seq5 = seq(0.6, 0.001, -0.002995)
 p.5 = dim(x.5)[2]
 n.5 = dim(x.5)[1]
 lambda.fix.5 = sqrt(log( p.5 ) / n.5 )
+trans.5 = "All stationary"
+vecm.5 = TRUE
 ```
 
 ```{r, echo=T}
@@ -403,6 +414,8 @@ lambda.seq6 = seq(0.6, 0.001, -0.002995)
 p.6 = dim(x.6)[2]
 n.6 = dim(x.6)[1]
 lambda.fix.6 = sqrt(log( p.6 ) / n.6 )
+trans.6 = "All stationary"
+vecm.6 = TRUE
 ```
 
 ```{r, echo=T}
@@ -421,13 +434,51 @@ plot6 = trace6$plot
 plot6
 ```
 
-```{r, echo=T, eval=T}
+```{r, echo=T}
 # table
 table6 = trace6$table
 table6
 ```
 
 
+```{r, echo=F, message=F, warning=F}
+# summary table create
+variable = c(trace1$coef[,2] %>% as.character(), 
+             trace2$coef[,2] %>% as.character(), 
+             trace3$coef[,2] %>% as.character(), 
+             trace4$coef[,2] %>% as.character(), 
+             trace5$coef[,2] %>% as.character(), 
+             trace6$coef[,2] %>% as.character()) %>% unique() %>% as.data.frame(stringsAsFactors = F)
+colnames(variable) = "variable"
+sum.table = left_join(variable, trace1$coef[,2:3]) %>% 
+  left_join(., trace2$coef[,2:3], by = "variable") %>%
+  left_join(., trace3$coef[,2:3], by = "variable") %>%
+  left_join(., trace4$coef[,2:3], by = "variable") %>%
+  left_join(., trace5$coef[,2:3], by = "variable") %>%
+  left_join(., trace6$coef[,2:3], by = "variable") 
+sum.table[ , -1] = round(sum.table[ , -1] , digits = 6)
+colnames(sum.table) = c("variables" , "Lasso 1" , "Lasso 2" , "Lasso 3" , 
+                        "Lasso 4" , "Lasso 5" , "Lasso 6")
+Lambda = c(variable = "Lambda" , 
+           "Lasso 1" = lambda.fix.1 , "Lasso 2" = lambda.fix.2 , 
+           "Lasso 3" = lambda.fix.3 , "Lasso 4" = lambda.fix.4 , 
+           "Lasso 5" = lambda.fix.5 , "Lasso 6" = lambda.fix.6)
+Lambda[-1] = as.numeric(Lambda[-1]) %>% round(digits = 6)
+Trans = c(variable = "Transformation" , 
+           "Lasso 1" = trans.1 , "Lasso 2" = trans.2 , 
+           "Lasso 3" = trans.3 , "Lasso 4" = trans.4 , 
+           "Lasso 5" = trans.5 , "Lasso 6" = trans.6)
+Maxlag = c(variable = "Max lags" , 
+           "Lasso 1" = maxlag.1 , "Lasso 2" = maxlag.2 , 
+           "Lasso 3" = maxlag.3 , "Lasso 4" = maxlag.4 , 
+           "Lasso 5" = maxlag.5 , "Lasso 6" = maxlag.6)
+VECM = c(variable = "VECM" , 
+           "Lasso 1" = vecm.1 , "Lasso 2" = vecm.2 , 
+           "Lasso 3" = vecm.3 , "Lasso 4" = vecm.4 , 
+           "Lasso 5" = vecm.5 , "Lasso 6" = vecm.6)
+sum.table = rbind(Trans, VECM, Maxlag, Lambda, sum.table)
+saveRDS(sum.table, file = "/Users/stanza/documents/github/lasso/sum_table.rds")
+```
 
 ## Part VII: Data transformation table
 
