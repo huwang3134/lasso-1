@@ -100,6 +100,8 @@ lambda.fix.1
 # fit model, collect data
 lasso.1 = glmnet(x.1, y.1, alpha=1, thresh=1E-10, lambda= lambda.seq1, maxit = 10^9)
 trace1 = trace.plot.table(lasso.1, lambda.seq1, lambda.fix.1)
+fitted.1 = predict(lasso.1 , s=lambda.seq1[which.min(abs(lambda.seq1-lambda.fix.1))] , newx = x.1)
+mse.1 = mean((y.1-fitted.1)^2)
 ```
 
 ```{r echo=F, message=F, warning=F}
@@ -169,6 +171,8 @@ lambda.fix.2
 # fit model, collect data
 lasso.2 = glmnet(x.2, y.2, alpha=1, thresh=1E-10, lambda= lambda.seq2, maxit = 10^9)
 trace2 = trace.plot.table(lasso.2, lambda.seq2, lambda.fix.2)
+fitted.2 = predict(lasso.2 , s=lambda.seq2[which.min(abs(lambda.seq2-lambda.fix.2))] , newx = x.2)
+mse.2 = mean((y.2-fitted.2)^2)
 ```
 
 ```{r echo=F, message=F, warning=F}
@@ -236,6 +240,8 @@ lambda.fix.3
 # fit model, collect data
 lasso.3 = glmnet(x.3, y.3, alpha=1, thresh=1E-10, lambda= lambda.seq3, maxit = 10^9)
 trace3 = trace.plot.table(lasso.3, lambda.seq3, lambda.fix.3)
+fitted.3 = predict(lasso.3 , s=lambda.seq3[which.min(abs(lambda.seq3-lambda.fix.3))] , newx = x.3)
+mse.3 = mean((y.3-fitted.3)^2)
 ```
 
 ```{r echo=F, message=F, warning=F}
@@ -302,6 +308,8 @@ lambda.fix.4
 # fit model, collect data
 lasso.4 = glmnet(x.4, y.4, alpha=1, thresh=1E-10, lambda= lambda.seq4, maxit = 10^9)
 trace4 = trace.plot.table(lasso.4, lambda.seq4, lambda.fix.4)
+fitted.4 = predict(lasso.4 , s=lambda.seq4[which.min(abs(lambda.seq4-lambda.fix.4))] , newx = x.4)
+mse.4 = mean((y.4-fitted.4)^2)
 ```
 
 ```{r echo=F, message=F, warning=F}
@@ -365,6 +373,8 @@ lambda.fix.5
 # fit model, collect data
 lasso.5 = glmnet(x.5, y.5, alpha=1, thresh=1E-10, lambda= lambda.seq5, maxit = 10^9)
 trace5 = trace.plot.table(lasso.5, lambda.seq5, lambda.fix.5)
+fitted.5 = predict(lasso.5 , s=lambda.seq5[which.min(abs(lambda.seq5-lambda.fix.5))] , newx = x.5)
+mse.5 = mean((y.5-fitted.5)^2)
 ```
 
 ```{r echo=F, message=F, warning=F}
@@ -426,6 +436,8 @@ lambda.fix.6
 # fit model, collect data
 lasso.6 = glmnet(x.6, y.6, alpha=1, thresh=1E-10, lambda= lambda.seq6, maxit = 10^9)
 trace6 = trace.plot.table(lasso.6, lambda.seq6, lambda.fix.6)
+fitted.6 = predict(lasso.6 , s=lambda.seq6[which.min(abs(lambda.seq6-lambda.fix.6))] , newx = x.6)
+mse.6 = mean((y.6-fitted.6)^2)
 ```
 
 ```{r echo=F, message=F, warning=F}
@@ -448,7 +460,7 @@ variable = c(trace1$coef[,2] %>% as.character(),
              trace3$coef[,2] %>% as.character(), 
              trace4$coef[,2] %>% as.character(), 
              trace5$coef[,2] %>% as.character(), 
-             trace6$coef[,2] %>% as.character()) %>% unique() %>% as.data.frame(stringsAsFactors = F)
+             trace6$coef[,2] %>% as.character()) %>% unique() %>% as.data.frame()
 colnames(variable) = "variable"
 sum.table = left_join(variable, trace1$coef[,2:3]) %>% 
   left_join(., trace2$coef[,2:3], by = "variable") %>%
@@ -476,7 +488,12 @@ VECM = c(variable = "VECM" ,
            "Lasso 1" = vecm.1 , "Lasso 2" = vecm.2 , 
            "Lasso 3" = vecm.3 , "Lasso 4" = vecm.4 , 
            "Lasso 5" = vecm.5 , "Lasso 6" = vecm.6)
-sum.table = rbind(Trans, VECM, Maxlag, Lambda, sum.table)
+MSE = c(variable = "MSE" , 
+           "Lasso 1" = mse.1 , "Lasso 2" = mse.2 , 
+           "Lasso 3" = mse.3 , "Lasso 4" = mse.4 , 
+           "Lasso 5" = mse.5 , "Lasso 6" = mse.6)
+MSE[-1] = as.numeric(MSE[-1]) %>% round(digits = 6)
+sum.table = rbind(Trans, VECM, Maxlag, MSE, Lambda, sum.table)
 saveRDS(sum.table, file = "/Users/stanza/documents/github/lasso/sum_table.rds")
 ```
 

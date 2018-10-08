@@ -8,5 +8,8 @@ classoption: landscape
 
 ```{r, echo=F, message=F}
 sum.table = readRDS(file =  "/Users/stanza/documents/github/lasso/sum_table.rds")
-pander::pander(sum.table, justify = "left" , split.table = Inf , emphasize.italics.rows = (1:4))
+pander::pander(sum.table, justify = "left" , split.table = Inf , 
+               emphasize.italics.rows = (1:5) , emphasize.strong.rows = (1:5) ,
+               split.cell = 80)
 ```
+
