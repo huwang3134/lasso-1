@@ -50,17 +50,6 @@ lag1<- function(maxlag, y){
   return(yt)
 }
 
-
-
-
-
-
-
-
-
-
-
-
 trace.plot.table <- function(model, lambda.seq, lambda.fix) {
   plot.lasso <- rbind(lambda.seq, coef(model)[-1,]) %>% t() %>%
     as.matrix() %>% as.data.frame(stringsAsFactors = F)
@@ -83,7 +72,19 @@ trace.plot.table <- function(model, lambda.seq, lambda.fix) {
   return(list)
 }
 
-
+out.mse <- function(x, y, lambda.seq, p){
+  x.train = x[1:ceiling(0.8*dim(x)[1]) , ]
+  y.train = y[1:ceiling(0.8*dim(x)[1])]
+  x.test = x[ (ceiling(0.8*dim(x)[1])+1):dim(x)[1] , ]
+  y.test = y[(ceiling(0.8*dim(x)[1])+1):dim(x)[1]]
+  p = p
+  n = dim(x.train)[1]
+  lambda = sqrt(log( p ) / n )
+  lasso = glmnet(x.train, y.train, alpha=1, thresh=1E-10, lambda= lambda.seq, maxit = 10^9)
+  y.fitted = predict(lasso , s=lambda.seq[which.min(abs(lambda.seq-lambda))] , newx = x.test)
+  mse = mean((y.test-y.fitted)^2)
+  return(mse)
+}
 
 
 

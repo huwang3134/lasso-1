@@ -1,15 +1,30 @@
 ---
-title: "Summary"
+title: ""
 author: ""
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output: pdf_document
 classoption: landscape
 ---
 
-```{r, echo=F, message=F}
+```{r, echo=F, message=F, include=F}
 sum.table = readRDS(file =  "/Users/stanza/documents/github/lasso/sum_table.rds")
 pander::pander(sum.table, justify = "left" , split.table = Inf , 
-               emphasize.italics.rows = (1:5) , emphasize.strong.rows = (1:5) ,
-               split.cell = 80)
+               split.cell = 80 , caption = "Estimated non-zero coefficients with fixed lambda")
+info.table = readRDS(file =  "/Users/stanza/documents/github/lasso/info_table.rds")
+pander::pander(info.table, justify = "left" , split.table = Inf , 
+               split.cell = 80 , caption = "Models information")
+table1 = rbind(info.table , sum.table)
 ```
+
+
+```{r, echo=F, message=F, include=T}
+pander::pander(table1, justify = "left" , split.table = Inf , 
+               split.cell = 80, emphasize.rows=(1:12) , emphasize.strong.rows=(1:12))
+```
+
+
+
+
+
+
 

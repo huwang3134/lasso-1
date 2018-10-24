@@ -1,0 +1,597 @@
+---
+title: "Lasso (GDP)"
+author: "Shuofan Zhang"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: pdf_document
+---
+
+```{r, include=T, echo=F, warning=F, 	message = FALSE}
+library("glmnet")
+library("reshape2")
+library("cellranger")
+library("tidyverse")
+library("knitr")
+library("ggrepel")
+library("pander")
+library("kableExtra")
+source("/Users/stanza/documents/github/lasso/fun.R")
+```
+
+```{r, include=T, echo=F, warning=F, 	message = FALSE}
+# read data
+bpraw <- read.csv("/Users/stanza/documents/github/lasso/bpraw.csv") 
+bptrans <- read.csv("/Users/stanza/documents/github/lasso/bptrans.csv", na.strings = NaN)
+tcode <- read.csv("/Users/stanza/documents/github/lasso/tcode.csv", stringsAsFactors = F) 
+short <- read.csv("/Users/stanza/documents/github/lasso/short.csv", stringsAsFactors = F) %>% unname()
+long <- read.csv("/Users/stanza/documents/github/lasso/long.csv", stringsAsFactors = F) %>% unname()
+# need to remove the copyright symbol from the long.csv
+idx <- apply(bpraw, 2, anyNA) %>% which() %>% unname()
+colnames(bpraw) = short
+colnames(bptrans) = short
+bpraw <- bpraw[ , -idx]
+bptrans <- bptrans[, -idx] %>% na.omit()
+tcode <- tcode[-idx,] 
+short <- short[, -idx] %>% t() %>% as.vector()
+long <- long[, -idx] %>% t() %>% as.vector()
+```
+
+## Detailed description
+
+Given the data set we use (Stock & Watson 2016), when thresh=1E-16, the difference in sum of squared errors between OLS and Lasso ($\lambda=0$) is 1.81e-06, while when thresh=1E-7, the difference is 0.005. But the difference when $\lambda$ is nonzero is not very significant, so to reduce the computational burden, we choose to use 1E-10 with the maxit (maximum number of passes over the data for all lambda values) to be 10^9. 
+
+All the monthly data was aggregated into quarterly data. 
+
+Each series was standardized (centered, sd=1) before put into regression.
+
+118 series were transformed by log().
+
+GDP growth rate is used as the dependent variable.
+$$y_t = log(GDP_{t})$$
+$$\Delta y_t = log(GDP_{t}) - log(GDP_{t-1})$$
+```{r, include=T, message=F, warning=F, echo=F}
+ggplot(bpraw, aes(x=(1:224), y=log(GDP))) + geom_line() +
+  labs(caption = "Time plot of log(GDP).") +
+  xlab("time")
+diff(log(bpraw[,1])) %>% as.data.frame() %>% ggplot(aes(x=(1:223), y=.)) + geom_line() +
+  labs(caption = "Time plot of differenced log(GDP).") +
+  xlab("time") +
+  ylab("First-differenced GDP")
+```
+
+### Lasso 1
+
+```{r, include=T, message=F, warning=F, echo=F}
+# clean data
+maxlag.1 = 1
+d.log.gdp <- bpraw[,1] %>% log() %>% diff() #%>% as.data.frame()# (2-224=223)
+y.1 <- lag0(maxlag.1 , d.log.gdp) %>% scale() # dependent variable (3-224=222), done
+x <- bpraw[, -1] %>% data.matrix()
+x.tcode = tcode[-1] 
+lambda.seq1 <- seq(0.5, 0, -0.0025)
+trans.1 = "1 less differenced"
+vecm.1 = FALSE
+# log() transformation
+x[ , x.tcode==5 | x.tcode==6] = log( x[ , x.tcode==5 | x.tcode==6] )
+# first difference
+xtem.1 = x[-1,] # tem (2-224=223)
+xtem.1[ , x.tcode==6] <- diff( x[ , x.tcode==6] )
+x.1 = lag1(maxlag.1 , xtem.1) %>% scale() # explanatory variables (2-223=222), done
+p.1 = dim(x.1)[2]
+n.1 = dim(x.1)[1]
+lambda.fix.1 = sqrt(log( p.1 ) / n.1 )
+# fit model, collect data
+lasso.1 = glmnet(x.1, y.1, alpha=1, thresh=1E-10, lambda= lambda.seq1, maxit = 10^9)
+trace1 = trace.plot.table(lasso.1, lambda.seq1, lambda.fix.1)
+fitted.1 = predict(lasso.1 , s=lambda.seq1[which.min(abs(lambda.seq1-lambda.fix.1))] , newx = x.1)
+mse.1 = mean((y.1-fitted.1)^2)
+mse.out1 = out.mse(x.1, y.1, lambda.seq1, p.1)
+# experiment with levels only
+test.x <- bpraw %>% data.matrix()
+test.x[ , tcode==5 | tcode==6] = log(test.x[ , tcode==5 | tcode==6])
+test.xtem = test.x[-1,]
+test.xtem[ , tcode==6] <- diff(test.x[ , tcode==6])
+test.x1 = lag1(maxlag.1, test.xtem) %>% scale()
+test.x1 = test.x1[ , tcode==5 | tcode==6]
+lambda.test = sqrt(log( dim(test.x1)[2] ) / dim(test.x1)[1] )
+lasso.test = glmnet(test.x1, y.1, alpha=1, thresh=1E-10, lambda= lambda.seq1, maxit = 10^9)
+test.trace = trace.plot.table(lasso.test, lambda.seq1, lambda.test)
+test.trace$plot
+test.trace$table
+```
+
+The regression being estimated is:
+$$\Delta y_t = I(0)_{t-1}
++ I(1)_{t-1}
++ \Delta I(2)_{t-1}$$
+
+1, 144 series were used as explanatory variables; 
+
+2, I(2) series were first differenced, no change to I(0) and I(1) series;
+
+3, all explanatory variables are lagged by 1 quarter;
+
+4, after first difference and one lag, we have 222 observations (lost 2).
+
+### Lasso 2
+
+The regression being estimated is:
+$$ 
+\begin{split} 
+\Delta y_t &= y_{t-1} \\
+&+ \Delta y_{t-1}
++ \Delta y_{t-2} 
++ \Delta y_{t-3}
++ \Delta y_{t-4} \\
+&+ I(0)_{t-1}
++ I(1)_{t-1}
++ \Delta I(2)_{t-1}
+\end{split} 
+$$ 
+
+1, 149 series were used as explanatory variables, $log(GDP_{t-1}) \ \Delta log(GDP_{t-1}) \ \Delta log(GDP_{t-2}) \ \Delta log(GDP_{t-3}) \ \Delta log(GDP_{t-4})$ were added on the top of the Lasso 1;
+
+2, I(2) series were first differenced;
+
+3, all explanatory variables are lagged by 1 quarter;
+
+4, after first difference and four lags, we have 219 observations (lost 5);
+
+
+```{r, include=T, message=F, warning=F, echo=F}
+# create data
+maxlag.2=4
+y.2 <- lag0(maxlag.2 , d.log.gdp) %>% scale() # dependent variable, done
+log.gdp.lag1 <- lag1(maxlag.2 , log(bpraw[-1 , 1]))  
+d.log.gdp.lags <- lags(maxlag.2 , d.log.gdp)   
+xtem.2 <- lag1(maxlag.2 , xtem.1) # x.2 (5 to 223)
+x.2 = cbind(log.gdp.lag1, d.log.gdp.lags, xtem.2) %>% scale() # explanatory variable, done
+lambda.seq2 = lambda.seq1
+p.2 = dim(x.2)[2]
+n.2 = dim(x.2)[1]
+lambda.fix.2 = sqrt(log( p.2 ) / n.2 )
+trans.2 = "1 less differenced"
+vecm.2 = TRUE
+# fit model, collect data
+lasso.2 = glmnet(x.2, y.2, alpha=1, thresh=1E-10, lambda= lambda.seq2, maxit = 10^9)
+trace2 = trace.plot.table(lasso.2, lambda.seq2, lambda.fix.2)
+fitted.2 = predict(lasso.2 , s=lambda.seq2[which.min(abs(lambda.seq2-lambda.fix.2))] , newx = x.2)
+mse.2 = mean((y.2-fitted.2)^2)
+mse.out2 = out.mse(x.2, y.2, lambda.seq2, p.2)
+```
+
+### Lasso 3
+
+Some notes: in this section, the number of parameters exceeds the number of observations, but glmnet still works when $\lambda=0$ (why), and "lm" also works unless we set "singular.ok = FALSE".
+
+The regression being estimated is:
+$$ 
+\begin{split} 
+\Delta y_t &= y_{t-1} \\
+&+ \Delta y_{t-1} + \Delta y_{t-2} + \Delta y_{t-3} + \Delta y_{t-4} \\
+&+  I(0)_{t-1} +  I(0)_{t-2} 
++  I(0)_{t-3} +  I(0)_{t-4} \\
+&+  \Delta I(1)_{t-1} +  \Delta I(1)_{t-2} 
++  \Delta I(1)_{t-3} +  \Delta I(1)_{t-4} \\
+&+  \Delta^2 I(2)_{t-1} + \Delta^2 I(2)_{t-2} 
++ \Delta^2 I(2)_{t-3} +  \Delta^2 I(2)_{t-4}
+\end{split} 
+$$ 
+
+
+
+1, 581 (1+4*145) series were used as explanatory variables; 
+
+I(1) series were first-differenced;
+
+I(2) series were second-differenced;
+
+2, all explanatory variables are now I(0) and lagged by 4 quarters;
+
+3, after first difference, second difference and four lags, we have 218 observations (lost 6).
+
+```{r, include=T, message=F, warning=F, echo=F}
+# create data
+maxlag.3 = 4
+xtem.3 = lags(maxlag.3 , bptrans)
+y.lag1.3 = lag1(maxlag.3 , log(bpraw[-(1:2) , 1]) )
+x.3 = cbind(y.lag1.3 , xtem.3) %>% scale()
+y.3 = lag0(maxlag.3 , bptrans[,1] ) %>% scale()
+lambda.seq3 = seq(0.6, 0.001, -0.002995)
+p.3 = dim(x.3)[2]
+n.3 = dim(x.3)[1]
+lambda.fix.3 = sqrt(log( p.3 ) / n.3 )
+trans.3 = "All stationary"
+vecm.3 = TRUE
+# fit model, collect data
+lasso.3 = glmnet(x.3, y.3, alpha=1, thresh=1E-10, lambda= lambda.seq3, maxit = 10^9)
+trace3 = trace.plot.table(lasso.3, lambda.seq3, lambda.fix.3)
+fitted.3 = predict(lasso.3 , s=lambda.seq3[which.min(abs(lambda.seq3-lambda.fix.3))] , newx = x.3)
+mse.3 = mean((y.3-fitted.3)^2)
+mse.out3 = out.mse(x.3, y.3, lambda.seq3, p.3)
+```
+
+### Lasso 4
+
+The regression being estimated is:
+$$ 
+\begin{split} 
+\Delta y_t &= y_{t-1} \\
+&+ \Delta y_{t-1} + \Delta y_{t-2} + \Delta y_{t-3} \\
+&+  I(0)_{t-1} +  I(0)_{t-2} 
++  I(0)_{t-3} \\
+&+  \Delta I(1)_{t-1} +  \Delta I(1)_{t-2} 
++  \Delta I(1)_{t-3} \\
+&+  \Delta^2 I(2)_{t-1} + \Delta^2 I(2)_{t-2} 
++ \Delta^2 I(2)_{t-3} 
+\end{split} 
+$$ 
+
+
+
+1, 436 (1+3*145) series were used as explanatory variables; 
+
+I(1) series were first-differenced;
+
+I(2) series were second-differenced;
+
+2, all explanatory variables are now I(0) and lagged by 3 quarters;
+
+3, after first difference, second difference and 3 lags, we have 219 observations (lost 5).
+
+```{r, include=T, message=F, warning=F, echo=F}
+# create data
+maxlag.4 = 3
+xtem.4 = lags(maxlag.4 , bptrans)
+y.lag1.4 = lag1(maxlag.4 , log(bpraw[-(1:2) , 1]) )
+x.4 = cbind(y.lag1.4 , xtem.4) %>% scale()
+y.4 = lag0(maxlag.4 , bptrans[,1] ) %>% scale()
+lambda.seq4 = seq(0.6, 0.001, -0.002995)
+p.4 = dim(x.4)[2]
+n.4 = dim(x.4)[1]
+lambda.fix.4 = sqrt(log( p.4 ) / n.4 )
+trans.4 = "All stationary"
+vecm.4 = TRUE
+# fit model, collect data
+lasso.4 = glmnet(x.4, y.4, alpha=1, thresh=1E-10, lambda= lambda.seq4, maxit = 10^9)
+trace4 = trace.plot.table(lasso.4, lambda.seq4, lambda.fix.4)
+fitted.4 = predict(lasso.4 , s=lambda.seq4[which.min(abs(lambda.seq4-lambda.fix.4))] , newx = x.4)
+mse.4 = mean((y.4-fitted.4)^2)
+mse.out4 = out.mse(x.4, y.4, lambda.seq4, p.4)
+```
+
+### Lasso 5
+
+The regression being estimated is:
+$$ 
+\begin{split} 
+\Delta y_t &= y_{t-1} \\
+&+ \Delta y_{t-1} + \Delta y_{t-2} \\
+&+  I(0)_{t-1} +  I(0)_{t-2} \\
+&+  \Delta I(1)_{t-1} +  \Delta I(1)_{t-2} \\
+&+  \Delta^2 I(2)_{t-1} + \Delta^2 I(2)_{t-2} 
+\end{split} 
+$$ 
+
+1, 291 (1+2*145) series were used as explanatory variables; 
+
+I(1) series were first-differenced;
+
+I(2) series were second-differenced;
+
+2, all explanatory variables are now I(0) and lagged by 2 quarters;
+
+3, after first difference, second difference and 2 lags, we have 219 observations (lost 5).
+
+```{r, include=T, message=F, warning=F, echo=F}
+# create data
+maxlag.5 = 2
+xtem.5 = lags(maxlag.5 , bptrans)
+y.lag1.5 = lag1(maxlag.5 , log(bpraw[-(1:2) , 1]) )
+x.5 = cbind(y.lag1.5 , xtem.5) %>% scale()
+y.5 = lag0(maxlag.5 , bptrans[,1] ) %>% scale()
+lambda.seq5 = seq(0.6, 0.001, -0.002995)
+p.5 = dim(x.5)[2]
+n.5 = dim(x.5)[1]
+lambda.fix.5 = sqrt(log( p.5 ) / n.5 )
+trans.5 = "All stationary"
+vecm.5 = TRUE
+# fit model, collect data
+lasso.5 = glmnet(x.5, y.5, alpha=1, thresh=1E-10, lambda= lambda.seq5, maxit = 10^9)
+trace5 = trace.plot.table(lasso.5, lambda.seq5, lambda.fix.5)
+fitted.5 = predict(lasso.5 , s=lambda.seq5[which.min(abs(lambda.seq5-lambda.fix.5))] , newx = x.5)
+mse.5 = mean((y.5-fitted.5)^2)
+mse.out5 = out.mse(x.5, y.5, lambda.seq5, p.5)
+```
+
+### Lasso 6
+
+The regression being estimated is:
+$$ 
+\begin{split} 
+\Delta y_t &= y_{t-1} + \Delta y_{t-1} +  I(0)_{t-1} +  \Delta I(1)_{t-1} +  \Delta^2 I(2)_{t-1} 
+\end{split} 
+$$ 
+
+1, 146 (1+145) series were used as explanatory variables; 
+
+I(1) series were first-differenced;
+
+I(2) series were second-differenced;
+
+2, all explanatory variables are now I(0) and lagged by 1 quarters;
+
+3, after first difference, second difference and 1 lag, we have 221 observations (lost 3).
+
+```{r, include=T, message=F, warning=F, echo=F}
+# create data
+maxlag.6 = 1
+xtem.6 = lags(maxlag.6 , bptrans)
+y.lag1.6 = lag1(maxlag.6 , log(bpraw[-(1:2) , 1]) )
+x.6 = cbind(y.lag1.6 , xtem.6) %>% scale()
+y.6 = lag0(maxlag.6 , bptrans[,1] ) %>% scale()
+lambda.seq6 = seq(0.6, 0.001, -0.002995)
+p.6 = dim(x.6)[2]
+n.6 = dim(x.6)[1]
+lambda.fix.6 = sqrt(log( p.6 ) / n.6 )
+trans.6 = "All stationary"
+vecm.6 = TRUE
+# fit model, collect data
+lasso.6 = glmnet(x.6, y.6, alpha=1, thresh=1E-10, lambda= lambda.seq6, maxit = 10^9)
+trace6 = trace.plot.table(lasso.6, lambda.seq6, lambda.fix.6)
+fitted.6 = predict(lasso.6 , s=lambda.seq6[which.min(abs(lambda.seq6-lambda.fix.6))] , newx = x.6)
+mse.6 = mean((y.6-fitted.6)^2)
+mse.out6 = out.mse(x.6, y.6, lambda.seq6, p.6)
+```
+
+### Lasso 7
+
+```{r, echo=F, message=F, warning=F}
+maxlag.7=4
+xtem.7 = xtem.1[ , x.tcode==2 | x.tcode==5 | x.tcode==6] 
+xtem.7 = lag1(maxlag = maxlag.7, xtem.7[-1,])
+colnames(xtem.7) = paste0(colnames(xtem.7), ".level")
+x.7 = cbind(xtem.3, xtem.7) %>% scale()
+y.7 = y.3
+lambda.seq7 = seq(0.6, 0.001, -0.002995)
+p.7 = dim(x.7)[2]
+n.7 = dim(x.7)[1]
+lambda.fix.7 = sqrt(log( p.7 ) / n.7 )
+trans.7 = "Combined"
+vecm.7 = TRUE
+# fit model, collect data
+lasso.7 = glmnet(x.7, y.7, alpha=1, thresh=1E-10, lambda= lambda.seq7, maxit = 10^9)
+trace7 = trace.plot.table(lasso.7, lambda.seq7, lambda.fix.7)
+fitted.7 = predict(lasso.7 , s=lambda.seq7[which.min(abs(lambda.seq7-lambda.fix.7))] , newx = x.7)
+mse.7 = mean((y.7-fitted.7)^2)
+mse.out7 = out.mse(x.7, y.7, lambda.seq7, p.7)
+```
+
+The regression being estimated is:
+$$ 
+\begin{split} 
+\Delta y_t &=\Delta y_{t-1} + \Delta y_{t-2} + \Delta y_{t-3} + \Delta y_{t-4} \\
+&+  I(0)_{t-1} +  I(0)_{t-2} 
++  I(0)_{t-3} +  I(0)_{t-4} \\
+&+  \Delta I(1)_{t-1} +  \Delta I(1)_{t-2} 
++  \Delta I(1)_{t-3} +  \Delta I(1)_{t-4} \\
+&+  \Delta^2 I(2)_{t-1} + \Delta^2 I(2)_{t-2} 
++ \Delta^2 I(2)_{t-3} +  \Delta^2 I(2)_{t-4} \\
+&+ I(1)_{t-1} 
++  \Delta I(2)_{t-1} 
+\end{split} 
+$$
+1, 697 series were used as explanatory variables; 
+
+I(1) series were first-differenced;
+
+I(2) series were second-differenced;
+
+2, all explanatory variables are now I(0) and lagged by 4 quarters;
+
+3, after first difference, second difference and 4 lags, we have 218 observations (lost 6).
+
+<!-- Lasso 8 gives the same results with lasso 7, omitted 
+
+The regression being estimated is:
+$$ 
+\begin{split} 
+\Delta y_t &=y_{t-1} \\
+&+ \Delta y_{t-1} + \Delta y_{t-2} + \Delta y_{t-3} + \Delta y_{t-4} \\
+&+  I(0)_{t-1} +  I(0)_{t-2} 
++  I(0)_{t-3} +  I(0)_{t-4} \\
+&+  \Delta I(1)_{t-1} +  \Delta I(1)_{t-2} 
++  \Delta I(1)_{t-3} +  \Delta I(1)_{t-4} \\
+&+  \Delta^2 I(2)_{t-1} + \Delta^2 I(2)_{t-2} 
++ \Delta^2 I(2)_{t-3} +  \Delta^2 I(2)_{t-4} \\
+&+ I(1)_{t-1} 
++  \Delta I(2)_{t-1}
+\end{split} 
+$$
+
+The level of lag 1 of y ($y_{t-1}$) was added on the top of lasso 7.
+
+1, 698 series were used as explanatory variables; 
+
+I(1) series were first-differenced;
+
+I(2) series were second-differenced;
+
+2, all explanatory variables are now I(0) and lagged by 4 quarters;
+
+3, after first difference, second difference and 4 lags, we have 218 observations (lost 6). -->
+
+### Experiment Lasso
+
+Remove "CP_Tbill Spread" in lasso 7.
+
+```{r, echo=F, message=F, warning=F}
+# experiment with level only
+test.x <- bpraw %>% data.matrix()
+test.x[ , tcode==5 | tcode==6] = log(test.x[ , tcode==5 | tcode==6])
+test.xtem = test.x[-1,]
+test.xtem[ , tcode==6] <- diff(test.x[ , tcode==6])
+test.x1 = lag1(maxlag.1, test.xtem) %>% scale()
+test.x1 = test.x1[ , tcode==5 | tcode==6]
+lambda.test = sqrt(log( dim(test.x1)[2] ) / dim(test.x1)[1] )
+lasso.test = glmnet(test.x1, y.1, alpha=1, thresh=1E-10, lambda= lambda.seq1, maxit = 10^9)
+test.trace = trace.plot.table(lasso.test, lambda.seq1, lambda.test)
+fitted.test = predict(lasso.test , s=lambda.seq1[which.min(abs(lambda.seq1-lambda.test))] , newx = test.x1)
+mse.test = mean((y.1-fitted.test)^2)
+mse.out.test = out.mse(test.x1, y.1, lambda.seq1, dim(test.x1)[2])
+```
+
+## Graphs
+
+```{r echo=F, message=F, warning=F}
+# plot
+plot1 = trace1$plot + ylim(-1, 1) + labs(subtitle = "Lasso 1, y is truncated to (-1, 1)")
+plot1
+
+plot2 = trace2$plot + ylim(-1, 1) + labs(subtitle = "Lasso 2, y is truncated to (-1, 1)")
+plot2
+
+plot3 = trace3$plot
+plot3 + labs(subtitle = "Lasso 3")
+
+plot4 = trace4$plot
+plot4 + labs(subtitle = "Lasso 4")
+
+plot5 = trace5$plot
+plot5 + labs(subtitle = "Lasso 5")
+
+plot6 = trace6$plot
+plot6 + labs(subtitle = "Lasso 6")
+
+plot7 = trace7$plot
+plot7 + labs(subtitle = "Lasso 7")
+
+plot9 = test.trace$plot
+plot9 + ylim(-1, 1) + labs(subtitle = "Experiment Lasso, y is truncated to (-1, 1)")
+```
+
+
+
+```{r, echo=F, message=F, warning=F}
+# summary table create
+variable = c(trace1$coef[,2] %>% as.character(), 
+             trace2$coef[,2] %>% as.character(), 
+             trace3$coef[,2] %>% as.character(), 
+             trace4$coef[,2] %>% as.character(), 
+             trace5$coef[,2] %>% as.character(), 
+             trace6$coef[,2] %>% as.character(),
+             trace7$coef[,2] %>% as.character(),
+             test.trace$coef[,2] %>% as.character()) %>% unique() %>% 
+  as.data.frame(stringsAsFactors = FALSE)
+colnames(variable) = "variable"
+sum.table = left_join(variable, trace1$coef[,2:3]) %>% 
+  left_join(., trace2$coef[,2:3], by = "variable") %>%
+  left_join(., trace3$coef[,2:3], by = "variable") %>%
+  left_join(., trace4$coef[,2:3], by = "variable") %>%
+  left_join(., trace5$coef[,2:3], by = "variable") %>%
+  left_join(., trace6$coef[,2:3], by = "variable") %>% 
+  left_join(., trace7$coef[,2:3], by = "variable") %>% 
+  left_join(., test.trace$coef[,2:3], by = "variable") %>% 
+  as.data.frame(stringsAsFactors = FALSE)
+sum.table[ , -1] = round(sum.table[ , -1] , digits = 6)
+colnames(sum.table) = c("" , "Lasso 1" , "Lasso 2" , "Lasso 3" , 
+                        "Lasso 4" , "Lasso 5" , "Lasso 6", "Lasso 7", "Exp Lasso")
+
+info.table = c("0" , "0" , "1", "0" , "0" , "1" , "1") %>% 
+  cbind(c("1" , "4" , "1" , "0" , "0" , "1" , "1")) %>% 
+  cbind(c("1" , "4" , "4" , "4" , "4" , "0" , "0")) %>% 
+  cbind(c("1" , "3" , "3" , "3" , "3" , "0" , "0")) %>% 
+  cbind(c("1" , "2" , "2" , "2" , "2" , "0" , "0")) %>% 
+  cbind(c("1" , "1" , "1" , "1" , "1" , "0" , "0")) %>% 
+  cbind(c("0" , "4" , "4" , "4" , "4" , "1" , "1")) %>% 
+  cbind(c("1" , "0" , "0" , "0" , "0" , "1" , "1")) %>% 
+  rbind(c(n.1 , n.2 , n.3 , n.4 , n.5 , n.6 , n.7 , dim(test.x1)[1])) %>%
+  rbind(c(p.1 , p.2 , p.3 , p.4 , p.5 , p.6 , p.7 , dim(test.x1)[2])) %>%
+  rbind(round(c(lambda.fix.1 , lambda.fix.2 , lambda.fix.3 , 
+          lambda.fix.4 , lambda.fix.5 , lambda.fix.6 , 
+          lambda.fix.7 , lambda.test), digits = 4)) %>% 
+  rbind(round(c(mse.1 , mse.2 , mse.3 , mse.4 , mse.5 , mse.6 , mse.7 , mse.test) , digits=5)) %>% 
+  rbind(round(c(mse.out1 , mse.out2 , mse.out3 , mse.out4 , mse.out5 , mse.out6 , 
+                mse.out7 , mse.out.test) , digits=5)) %>% 
+  cbind(c("y.lag1", "D.y.lags", "I(0).lags" ,"D.I(1).lags",
+                     "D2.I(2).lags", "I(1).lags", "D.I(2).lags", 
+               "#obs" , "#regressors" , "Fixed Lambda" , "MSE.in", "MSE.out") , .) %>% 
+  as.data.frame(stringsAsFactors = FALSE)
+colnames(info.table) = c("" , "Lasso 1" , "Lasso 2" , "Lasso 3" , 
+                        "Lasso 4" , "Lasso 5" , "Lasso 6", "Lasso 7", "Exp Lasso") 
+
+saveRDS(sum.table, file = "/Users/stanza/documents/github/lasso/sum_table.rds")
+saveRDS(info.table, file = "/Users/stanza/documents/github/lasso/info_table.rds")
+```
+
+
+
+```{r, echo=F, message=F, warning=F, eval=F}
+## C.V.
+cv7 = cv.glmnet(x.7, y.7, lambda = lambda.seq7,  alpha=1)
+coef7 = coef(cv7, s="lambda.min") %>%
+     as.matrix() %>% as.data.frame(stringsAsFactors = F, row.names = NULL)
+ colnames(coef7) = "coef"
+no.coef7 = subset(coef7, coef != 0)
+```
+
+
+## Data transformation table
+
+```{r, results='asis', echo=F, warning=F, message=F, eval=T}
+t.data <- tibble(tcode, short, long) 
+
+t1 <- t.data[t.data$tcode==1, ] 
+t2 <- t.data[t.data$tcode==2, ] 
+t3 <- t.data[t.data$tcode==3, ] 
+t4 <- t.data[t.data$tcode==4, ] 
+t5 <- t.data[t.data$tcode==5, ] 
+t6 <- t.data[t.data$tcode==6, ] 
+
+t1[,1] <- c("I(0)") 
+t2[,1] <- c("I(1)")
+t5[,1] <- c("log, I(1)")
+t6[,1] <- c("log, I(2)")
+
+pander(t1, justify = 'left', caption = "Number of series with 'No-transformation' is 12",
+       split.cells = c(5, 5, 40)) 
+pander(t2, justify = 'left', caption = "Number of 'First-differenced' series is 15",
+       split.cells = c(5, 5, 40)) 
+pander(t5, justify = 'left', caption = "Number of 'First-differenced in logs' series is 86",
+       split.cells = c(5, 5, 40)) 
+pander(t6, justify = 'left', caption = "Number of 'Second-differenced in logs' series is 32",
+       split.cells = c(5, 5, 40)) 
+
+```
+
+
+
+```{r, echo=F, message=F, warning=F, eval=F}
+# lasso 8, deleted
+maxlag.8=4
+x.8 = cbind("GDP.lag1.level"=y.lag1.3, xtem.3, xtem.7) %>% scale()
+y.8 = y.3
+lambda.seq8 = seq(0.6, 0.001, -0.002995)
+p.8 = dim(x.8)[2]
+n.8 = dim(x.8)[1]
+lambda.fix.8 = sqrt(log( p.8 ) / n.8 )
+trans.8 = "Combined"
+vecm.8 = TRUE
+# fit model, collect data
+lasso.8 = glmnet(x.8, y.8, alpha=1, thresh=1E-10, lambda= lambda.seq8, maxit = 10^9)
+trace8 = trace.plot.table(lasso.8, lambda.seq8, lambda.fix.8)
+fitted.8 = predict(lasso.8 , s=lambda.seq8[which.min(abs(lambda.seq8-lambda.fix.8))] , newx = x.8)
+mse.8 = mean((y.8-fitted.8)^2)
+mse.out8 = out.mse(x.8, y.8, lambda.seq8, p.8)
+```
+
+
+
+
+
+
+
+
+
+
+
+

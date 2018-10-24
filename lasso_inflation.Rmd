@@ -1,0 +1,205 @@
+---
+title: "Lasso (Inflation)"
+author: "Shuofan Zhang"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: pdf_document
+---
+
+```{r, include=T, echo=F, warning=F, 	message = FALSE}
+library("glmnet")
+library("reshape2")
+library("cellranger")
+library("tidyverse")
+library("knitr")
+library("ggrepel")
+library("pander")
+library("kableExtra")
+library("tseries")
+source("/Users/stanza/documents/github/lasso/fun.R")
+```
+
+```{r, include=T, echo=F, warning=F, 	message = FALSE}
+# read data
+bpraw <- read.csv("/Users/stanza/documents/github/lasso/bpraw.csv") 
+bptrans <- read.csv("/Users/stanza/documents/github/lasso/bptrans.csv", na.strings = NaN)
+tcode <- read.csv("/Users/stanza/documents/github/lasso/tcode.csv", stringsAsFactors = F) 
+short <- read.csv("/Users/stanza/documents/github/lasso/short.csv", stringsAsFactors = F) %>% unname()
+long <- read.csv("/Users/stanza/documents/github/lasso/long.csv", stringsAsFactors = F) %>% unname()
+# need to remove the copyright symbol from the long.csv
+idx <- apply(bpraw, 2, anyNA) %>% which() %>% unname()
+colnames(bpraw) = short
+colnames(bptrans) = short
+bpraw <- bpraw[ , -idx]
+bptrans <- bptrans[, -idx] %>% na.omit()
+tcode <- tcode[-idx,] 
+short <- short[, -idx] %>% t() %>% as.vector()
+long <- long[, -idx] %>% t() %>% as.vector()
+```
+
+## Detailed description
+
+The inflation rate is used as the dependent variable.
+$$y_t = log(CPI_{t}) - log(CPI_{t-1})$$
+$$\Delta y_t = log(CPI_{t}) - 2*log(CPI_{t-1}) + log(CPI_{t-2})$$
+
+```{r, include=T, message=F, warning=F, echo=F}
+ggplot(bpraw, aes(x=(1:224), y=log(CPI))) + geom_line() +
+  labs(caption = "Time plot of log(CPI).") +
+  xlab("time")
+```
+
+```{r, include=T, message=F, warning=F, echo=F}
+diff(log(bpraw[,101])) %>% as.data.frame() %>% ggplot(aes(x=(1:223), y=.)) + geom_line() +
+  labs(caption = "Time plot of first-differenced log(CPI) (i.e. inflation rate).") +
+  xlab("time") +
+  ylab("First-differenced CPI (inflation rate)")
+
+
+diff(log(bpraw[,101])) %>% diff() %>% as.data.frame() %>% ggplot(aes(x=(1:222), y=.)) + geom_line() + labs(caption = "Time plot of second-differenced log(CPI) (first-differenced inflation rate") + xlab("time")
+
+
+inflation <- bpraw[,101] %>% log() %>% diff() 
+adf.inflation <- adf.test(inflation)
+pander(adf.inflation)
+```
+
+ADF test suggests inflation rate is I(1) at 10% significance level.
+
+
+### Lasso
+
+The regression being estimated is:
+$$ 
+\begin{split} 
+\Delta y_t &=y_{t-1} \\
+&+ \Delta y_{t-1} + \Delta y_{t-2} + \Delta y_{t-3} + \Delta y_{t-4} \\
+&+  I(0)_{t-1} +  I(0)_{t-2} 
++  I(0)_{t-3} +  I(0)_{t-4} \\
+&+  \Delta I(1)_{t-1} +  \Delta I(1)_{t-2} 
++  \Delta I(1)_{t-3} +  \Delta I(1)_{t-4} \\
+&+  \Delta^2 I(2)_{t-1} + \Delta^2 I(2)_{t-2} 
++ \Delta^2 I(2)_{t-3} +  \Delta^2 I(2)_{t-4} \\
+&+ I(1)_{t-1} 
++  \Delta I(2)_{t-1}
+\end{split} 
+$$
+
+713 series are used as explanatory variables. 
+
+4 lags of I(0), including first-differenced I(1) and second-differenced I(2), 4*145=580; (lags of $\Delta y_{t-1}, \Delta y_{t-2} , \Delta y_{t-3} , \Delta y_{t-4}$ are included)
+
+1 lag of I(1), including first-differenced I(2), 133. ($y_{t-1}$ is included)
+
+```{r, echo=F, message=F, warning=F}
+maxlag.1=4
+d.inflation <- diff(inflation)
+y.1 <- lag0(maxlag.1 , d.inflation) %>% scale() # 221 obs, y is done
+x.trans = lags(maxlag.1 , bptrans)
+I1.log = bpraw[, tcode==5] %>% log()
+I1 = cbind(bpraw[, tcode==2], I1.log)
+d.I2 = bpraw[, tcode==6] %>% log() %>% apply(2, diff) %>% as.data.frame()
+xtem = lag1(maxlag.1, I1[-(1:2),]) %>% cbind(lag1(maxlag.1, d.I2[-1,]))
+colnames(xtem) = paste0(colnames(xtem), ".level")
+x.1 <- cbind(x.trans , xtem) %>% scale() # x is done
+lambda.seq.1 = seq(0.6, 0.001, -0.002995)
+p.1 = dim(x.1)[2]
+n.1 = dim(x.1)[1]
+lambda.fix.1 = sqrt(log( p.1 ) / n.1 )
+trans.1 = "Combined"
+# fit model, collect data
+lasso.1 = glmnet(x.1, y.1, alpha=1, thresh=1E-10, lambda= lambda.seq.1, maxit = 10^9)
+trace1 = trace.plot.table(lasso.1, lambda.seq.1, lambda.fix.1)
+fitted.1 = predict(lasso.1 , s=lambda.seq.1[which.min(abs(lambda.seq.1-lambda.fix.1))] , newx = x.1)
+mse.1 = mean((y.1-fitted.1)^2)
+mse.out1 = out.mse(x.1, y.1, lambda.seq.1, p.1)
+trace1$table
+trace1$plot
+```
+
+
+```{r, echo=F, message=F, warning=F}
+# investigate the level series
+pced.gas.energy.level = d.I2[,17]
+adf <- adf.test(pced.gas.energy.level)
+pander(adf)
+ggplot(data=as.data.frame(pced.gas.energy.level) , aes(x=(1:223), y=pced.gas.energy.level)) + geom_line() + ggtitle("First differenced PCED_GAS_ENERGY") + xlab("time")
+```
+
+ADF test suggests the "level" variable is actually not I(1).
+
+Now, we use the "inflation rate" as the dependent variable. 
+
+The regression being estimated is:
+$$ 
+\begin{split} 
+Inflation_t &=log(CPI)_{t-1} \\
+&+  I(0)_{t-1} +  I(0)_{t-2} 
++  I(0)_{t-3} +  I(0)_{t-4} \\
+&+  \Delta I(1)_{t-1} +  \Delta I(1)_{t-2} 
++  \Delta I(1)_{t-3} +  \Delta I(1)_{t-4} \\
+&+  \Delta^2 I(2)_{t-1} + \Delta^2 I(2)_{t-2} 
++ \Delta^2 I(2)_{t-3} +  \Delta^2 I(2)_{t-4} \\
+&+ I(1)_{t-1} 
++  \Delta I(2)_{t-1}
+\end{split} 
+$$
+
+```{r, echo=F, message=F, warning=F}
+maxlag.2=4
+y.2 <- lag0(maxlag.2 , inflation[-1]) %>% scale() # 221 obs, y is done
+log.cpi.lag1 = bpraw[-(1:2) , 101] %>% log() %>% lag1(maxlag.2, .)
+x.trans.2 = lags(maxlag.2 , bptrans)
+d.I2.2 = d.I2[, -26]
+xtem.2 = lag1(maxlag.2, I1[-(1:2),]) %>% cbind(lag1(maxlag.2, d.I2.2[-1,]))
+colnames(xtem.2) = paste0(colnames(xtem.2), ".level")
+x.2 <- cbind(log.cpi.lag1, x.trans.2 , xtem.2) %>% scale() # x is done
+
+lambda.seq.2 = seq(0.6, 0.001, -0.002995)
+p.2 = dim(x.2)[2]
+n.2 = dim(x.2)[1]
+lambda.fix.2 = sqrt(log( p.2 ) / n.2 )
+trans.2 = "Combined"
+# fit model, collect data
+lasso.2 = glmnet(x.2, y.2, alpha=1, thresh=1E-10, lambda= lambda.seq.2, maxit = 10^9)
+trace2 = trace.plot.table(lasso.2, lambda.seq.2, lambda.fix.2)
+fitted.2 = predict(lasso.2 , s=lambda.seq.2[which.min(abs(lambda.seq.2-lambda.fix.2))] , newx = x.2)
+mse.2 = mean((y.2-fitted.2)^2)
+mse.out2 = out.mse(x.2, y.2, lambda.seq.2, p.2)
+trace2$table
+trace2$plot
+```
+
+
+<!--  $y_{t-1}$ is excluded now. This part has been deleted. -->
+
+```{r, echo=F, message=F, warning=F, eval=F}
+x.2 <- cbind(x.trans , xtem[,-112]) %>% scale() # x is done
+y.2 = y.1
+p.2 = dim(x.2)[2]
+n.2 = dim(x.2)[1]
+lambda.seq.2 = lambda.seq.1
+lambda.fix.2 = sqrt(log(p.2)/n.2)
+lasso.2 = glmnet(x.2, y.1, alpha=1, thresh=1E-10, lambda= lambda.seq.1, maxit = 10^9)
+trace2 = trace.plot.table(lasso.2, lambda.seq.2, lambda.fix.2)
+fitted.2 = predict(lasso.2 , s=lambda.seq.2[which.min(abs(lambda.seq.2-lambda.fix.2))] , newx = x.2)
+mse.2 = mean((y.2-fitted.2)^2)
+mse.out2 = out.mse(x.2, y.2, lambda.seq.2, p.2)
+trace2$table
+trace2$plot
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
