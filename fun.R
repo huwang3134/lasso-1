@@ -344,6 +344,47 @@ lasso333ng <- function(data, tcode, yr){
 }
 
 
-
+adf.drift <- function(data, criteria) {
+  tb = data.frame(Series = character(), Conclusion = character(), Type = character() , 
+                  Lags = numeric() , 
+                  stringsAsFactors = FALSE)
+  if (is.null(dim(data))) { # if it is a single series
+    nm = deparse(substitute(data))
+    data = na.omit(data)
+    t = length(data)
+    #x = 1:t
+    pmax = ceiling(12 * (t/100)^0.25 )
+    type = "drift"
+    adf = ur.df(data, selectlags = criteria, lags=pmax, type=type)
+    calc = adf@teststat[1,1]
+    if (calc < adf@cval[1,2]) {
+      con = "I(0)"
+    } else {
+      con = "I(1)"
+    }
+    ll = dim(adf@testreg$coefficients)[1]-2
+    tb[1,] = c(nm, con, type, ll)
+  } # if it is a data frame
+  else {
+    for (i in 1:dim(data)[2]){
+      s = data[,i]
+      s = na.omit(s)
+      t = length(s)
+      #x = 1:t
+      pmax = ceiling(12 * (t/100)^0.25 )
+      type = "drift"
+      adf = ur.df(s, selectlags = criteria, lags=pmax, type=type)
+      calc = adf@teststat[1,1]
+      if (calc < adf@cval[1,2]) {
+        con = "I(0)"
+      } else {
+        con = "I(1)"
+      }
+      ll = dim(adf@testreg$coefficients)[1]-2
+      tb[i,] = c(colnames(data)[i], con, type, ll)
+    }
+  }
+  return(tb)
+}
 
 
