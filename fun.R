@@ -311,9 +311,9 @@ lasso222ng <- function(data, yr, tcode){
 }
 
 
-lasso333ng <- function(data, tcode, y){
+lasso333ng <- function(data, tcode, yr){
   # create data
-  ytem = y[-(1:2)]
+  ytem = yr[-(1:2)]
   y = lag0(maxlag, ytem) %>% scale()
   i0 = data[ , tcode=="0"] # *
   i1 = data[,tcode=="1"] # *

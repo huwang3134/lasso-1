@@ -42,6 +42,10 @@ dt.yr2 = lm(data = ydata, yr2 ~ time)$residuals
 dt.yr3 = lm(data = ydata, yr3 ~ time)$residuals
 dt.yr4 = lm(data = ydata, yr4 ~ time)$residuals
 dt.yr5 = lm(data = ydata, yr5 ~ time)$residuals
+fd.yr2 = diff(ydata$yr2)
+fd.yr3 = diff(ydata$yr3)
+fd.yr4 = diff(ydata$yr4)
+fd.yr5 = diff(ydata$yr5)
 yr2 = ydata$yr2
 ngraw = ngraw[1:dim(ydata)[1] , ]
 ngraw[, tcode==4 | tcode==5 | tcode==6] = log(ngraw[, tcode==4 | tcode==5 | tcode==6])
@@ -148,6 +152,7 @@ saveRDS(aabbss, file = "/Users/stanza/documents/github/lasso/ng/compare.rds")
 # Data prepare
 maxlag = 4
 lambda.seq <- seq(0.5, 0, -0.0025)
+lambda.seq.fd <- seq(0.2, 0, -0.001)
 #save.image(file = "sab_gdp.RData")
 ```
 
@@ -169,36 +174,52 @@ $$
 
 ```{r include=T, message=F, warning=F, echo=F}
 # ng
-lasso1.ng = lasso111ng(data = ngraw, tcode = t.ng, y=yr2)
+lasso1.ng = lasso111ng(data = ngraw, tcode = t.ng, yr = yr2)
 trace1.ng = trace.plot.table(lasso1.ng$lasso, lambda.seq, lasso1.ng$lambda)
 # AIC
-lasso1.aic = lasso111ng(data = ngraw, tcode = t.aic, y=yr2)
+lasso1.aic = lasso111ng(data = ngraw, tcode = t.aic, yr = yr2)
 trace1.aic = trace.plot.table(lasso1.aic$lasso, lambda.seq, lasso1.aic$lambda)
 # BIC
-lasso1.bic = lasso111ng(data = ngraw, tcode = t.bic, y=yr2)
+lasso1.bic = lasso111ng(data = ngraw, tcode = t.bic, yr = yr2)
 trace1.bic = trace.plot.table(lasso1.bic$lasso, lambda.seq, lasso1.bic$lambda)
 
 sum1 = sumtable(trace1.ng, trace1.aic, trace1.bic)
-sum1 = cbind(I1=c("NG", "NG, BIC", "AIC, BIC", "BIC",
-                  "ALL", "NG", "AIC, BIC", "ALL",
-                  "ALL", "NG, BIC", "ALL", "ALL"), sum1)
-colnames(sum1) = c("I1","", "NG", "AIC", "BIC")
-write.csv(sum1, "lasso1.csv")
+#sum1 = cbind(I1=c("NG", "NG, BIC", "AIC, BIC", "BIC",
+#                  "ALL", "NG", "AIC, BIC", "ALL",
+#                  "ALL", "NG, BIC", "ALL", "ALL"), sum1)
+colnames(sum1) = c("", "NG", "AIC", "BIC")
+write.csv(sum1, "/Users/stanza/documents/github/lasso/ng/lasso1.csv")
 ```
+
 ```{r include=T, message=F, warning=F, echo=F}
 # detrend y data
-lasso1.ng.dt = lasso111ng(data = ngraw, tcode = t.ng, y=dt.yr2)
+lasso1.ng.dt = lasso111ng(data = ngraw, tcode = t.ng, yr = dt.yr2)
 trace1.ng.dt = trace.plot.table(lasso1.ng.dt$lasso, lambda.seq, lasso1.ng.dt$lambda)
-lasso1.aic.dt = lasso111ng(data = ngraw, tcode = t.aic, y=dt.yr2)
+lasso1.aic.dt = lasso111ng(data = ngraw, tcode = t.aic, yr = dt.yr2)
 trace1.aic.dt = trace.plot.table(lasso1.aic.dt$lasso, lambda.seq, lasso1.aic.dt$lambda)
-lasso1.bic.dt = lasso111ng(data = ngraw, tcode = t.bic, y=dt.yr2)
+lasso1.bic.dt = lasso111ng(data = ngraw, tcode = t.bic, yr = dt.yr2)
 trace1.bic.dt = trace.plot.table(lasso1.bic.dt$lasso, lambda.seq, lasso1.bic.dt$lambda)
 
 sum1.dt = sumtable(trace1.ng.dt, trace1.aic.dt, trace1.bic.dt)
-sum1.dt = cbind(I1=c("BIC", "BIC", "ALL", "ALL", "AIC, BIC", "ALL", "ALL", "AIC, BIC"), sum1.dt)
-colnames(sum1.dt) = c("I1","", "NG", "AIC", "BIC")
+#sum1.dt = cbind(I1=c("BIC", "BIC", "ALL", "ALL", "AIC, BIC", "ALL", "ALL", "AIC, BIC"), sum1.dt)
+colnames(sum1.dt) = c("", "NG", "AIC", "BIC")
 #pander(sum1.dt, caption = "Lasso 1, non-zero coefficients, detrended y series")
-write.csv(sum1.dt, "lasso1_dt.csv")
+write.csv(sum1.dt, "/Users/stanza/documents/github/lasso/ng/lasso1_dt.csv")
+```
+
+```{r include=T, message=F, warning=F, echo=F}
+# first-differenced y data
+lasso1.ng.fd = lasso111ng(data = ngraw[-1,], tcode = t.ng, yr=fd.yr2)
+trace1.ng.fd = trace.plot.table(lasso1.ng.fd$lasso, lambda.seq.fd, lasso1.ng.fd$lambda)
+lasso1.aic.fd = lasso111ng(data = ngraw[-1,], tcode = t.aic, yr=fd.yr2)
+trace1.aic.fd = trace.plot.table(lasso1.aic.fd$lasso, lambda.seq.fd, lasso1.aic.fd$lambda)
+lasso1.bic.fd = lasso111ng(data = ngraw[-1,], tcode = t.bic, yr=fd.yr2)
+trace1.bic.fd = trace.plot.table(lasso1.bic.fd$lasso, lambda.seq.fd, lasso1.bic.fd$lambda)
+
+sum1.fd = sumtable(trace1.ng.fd, trace1.aic.fd, trace1.bic.fd)
+colnames(sum1.fd) = c("", "NG", "AIC", "BIC")
+#pander(sum1.fd, caption = "Lasso 1, non-zero coefficients, detrended y series")
+write.csv(sum1.fd, "/Users/stanza/documents/github/lasso/ng/lasso1_fd.csv")
 ```
 
 ## Lasso 2
@@ -219,33 +240,46 @@ $$
 
 ```{r include=T, message=F, warning=F, echo=F}
 # ng
-lasso2.ng = lasso222ng(data = ngraw, tcode = t.ng, y=yr2)
+lasso2.ng = lasso222ng(data = ngraw, tcode = t.ng, yr=yr2)
 trace2.ng = trace.plot.table(lasso2.ng$lasso, lambda.seq, lasso2.ng$lambda)
 # AIC
-lasso2.aic = lasso222ng(data = ngraw, tcode = t.aic, y=yr2)
+lasso2.aic = lasso222ng(data = ngraw, tcode = t.aic, yr=yr2)
 trace2.aic = trace.plot.table(lasso2.aic$lasso, lambda.seq, lasso2.aic$lambda)
 # BIC
-lasso2.bic = lasso222ng(data = ngraw, tcode = t.bic, y=yr2)
+lasso2.bic = lasso222ng(data = ngraw, tcode = t.bic, yr=yr2)
 trace2.bic = trace.plot.table(lasso2.bic$lasso, lambda.seq, lasso2.bic$lambda)
 sum2 = sumtable(trace2.ng, trace2.aic, trace2.bic)
-colnames(sum2) = c("variable", "NG", "AIC", "BIC")
+colnames(sum2) = c("", "NG", "AIC", "BIC")
 #pander(sum2, caption = "Lasso 2, non-zero coefficients")
-write.csv(sum2, "lasso2.csv")
+write.csv(sum2, "/Users/stanza/documents/github/lasso/ng/lasso2.csv")
 ```
 
 ```{r include=T, message=F, warning=F, echo=F}
 # detrend y data
-lasso2.ng.dt = lasso222ng(data = ngraw, tcode = t.ng, y=dt.yr2)
+lasso2.ng.dt = lasso222ng(data = ngraw, tcode = t.ng, yr=dt.yr2)
 trace2.ng.dt = trace.plot.table(lasso2.ng.dt$lasso, lambda.seq, lasso2.ng.dt$lambda)
-lasso2.aic.dt = lasso222ng(data = ngraw, tcode = t.aic, y=dt.yr2)
+lasso2.aic.dt = lasso222ng(data = ngraw, tcode = t.aic, yr=dt.yr2)
 trace2.aic.dt = trace.plot.table(lasso2.aic.dt$lasso, lambda.seq, lasso2.aic.dt$lambda)
-lasso2.bic.dt = lasso222ng(data = ngraw, tcode = t.bic, y=dt.yr2)
+lasso2.bic.dt = lasso222ng(data = ngraw, tcode = t.bic, yr=dt.yr2)
 trace2.bic.dt = trace.plot.table(lasso2.bic.dt$lasso, lambda.seq, lasso2.bic.dt$lambda)
-
 sum2.dt = sumtable(trace2.ng.dt, trace2.aic.dt, trace2.bic.dt)
 colnames(sum2.dt) = c("", "NG", "AIC", "BIC")
 #pander(sum2.dt, caption = "Lasso 2, non-zero coefficients, detrended y series")
-write.csv(sum2.dt, "lasso2_dt.csv")
+write.csv(sum2.dt, "/Users/stanza/documents/github/lasso/ng/lasso2_dt.csv")
+```
+
+```{r include=T, message=F, warning=F, echo=F}
+# first-differenced y data
+lasso2.ng.fd = lasso222ng(data = ngraw[-1,], tcode = t.ng, yr=fd.yr2)
+trace2.ng.fd = trace.plot.table(lasso2.ng.fd$lasso, lambda.seq.fd, lasso2.ng.fd$lambda)
+lasso2.aic.fd = lasso222ng(data = ngraw[-1,], tcode = t.aic, yr=fd.yr2)
+trace2.aic.fd = trace.plot.table(lasso2.aic.fd$lasso, lambda.seq.fd, lasso2.aic.fd$lambda)
+lasso2.bic.fd = lasso222ng(data = ngraw[-1,], tcode = t.bic, yr=fd.yr2)
+trace2.bic.fd = trace.plot.table(lasso2.bic.fd$lasso, lambda.seq.fd, lasso2.bic.fd$lambda)
+sum2.fd = sumtable(trace2.ng.fd, trace2.aic.fd, trace2.bic.fd)
+colnames(sum2.fd) = c("", "NG", "AIC", "BIC")
+#pander(sum2.fd, caption = "Lasso 2, non-zero coefficients, detrended y series")
+write.csv(sum2.fd, "/Users/stanza/documents/github/lasso/ng/lasso2_fd.csv")
 ```
 
 ## Lasso 3
@@ -266,40 +300,50 @@ $$
 
 ```{r include=T, message=F, warning=F, echo=F}
 # ng
-lasso3.ng = lasso333ng(data = ngraw, tcode = t.ng, y=yr2)
+lasso3.ng = lasso333ng(data = ngraw, tcode = t.ng, yr=yr2)
 trace3.ng = trace.plot.table(lasso3.ng$lasso, lambda.seq, lasso3.ng$lambda)
 # AIC
-lasso3.aic = lasso333ng(data = ngraw, tcode = t.aic, y=yr2)
+lasso3.aic = lasso333ng(data = ngraw, tcode = t.aic, yr=yr2)
 trace3.aic = trace.plot.table(lasso3.aic$lasso, lambda.seq, lasso3.aic$lambda)
 # BIC
-lasso3.bic = lasso333ng(data = ngraw, tcode = t.bic, y=yr2)
+lasso3.bic = lasso333ng(data = ngraw, tcode = t.bic, yr=yr2)
 trace3.bic = trace.plot.table(lasso3.bic$lasso, lambda.seq, lasso3.bic$lambda)
-
 sum3 = sumtable(trace3.ng, trace3.aic, trace3.bic)
-sum3 = cbind(c("AIC, BIC", "BIC", "", "AIC, BIC",
-               "NG", "NG, BIC", "ALL", "ALL", 
-               "ALL", "NG", "NG, BIC"), sum3)
-colnames(sum3) = c("I1","", "NG", "AIC", "BIC")
+colnames(sum3) = c("", "NG", "AIC", "BIC")
 #pander(sum3, caption = "Lasso 3, non-zero coefficients")
-write.csv(sum3, "lasso3.csv")
+write.csv(sum3, "/Users/stanza/documents/github/lasso/ng/lasso3.csv")
 ```
 
 ```{r include=T, message=F, warning=F, echo=F}
 # detrend y data
-lasso3.ng.dt = lasso333ng(data = ngraw, tcode = t.ng, y=dt.yr3)
+lasso3.ng.dt = lasso333ng(data = ngraw, tcode = t.ng, yr=dt.yr3)
 trace3.ng.dt = trace.plot.table(lasso3.ng.dt$lasso, lambda.seq, lasso3.ng.dt$lambda)
-lasso3.aic.dt = lasso333ng(data = ngraw, tcode = t.aic, y=dt.yr3)
+lasso3.aic.dt = lasso333ng(data = ngraw, tcode = t.aic, yr=dt.yr3)
 trace3.aic.dt = trace.plot.table(lasso3.aic.dt$lasso, lambda.seq, lasso3.aic.dt$lambda)
-lasso3.bic.dt = lasso333ng(data = ngraw, tcode = t.bic, y=dt.yr3)
+lasso3.bic.dt = lasso333ng(data = ngraw, tcode = t.bic, yr=dt.yr3)
 trace3.bic.dt = trace.plot.table(lasso3.bic.dt$lasso, lambda.seq, lasso3.bic.dt$lambda)
-
 sum3.dt = sumtable(trace3.ng.dt, trace3.aic.dt, trace3.bic.dt)
 colnames(sum3.dt) = c("", "NG", "AIC", "BIC")
 #pander(sum3.dt, caption = "Lasso 3, non-zero coefficients, detrended y series")
-write.csv(sum3.dt, "lasso3_dt.csv")
+write.csv(sum3.dt, "/Users/stanza/documents/github/lasso/ng/lasso3_dt.csv")
 ```
 
 ```{r include=T, message=F, warning=F, echo=F}
+# first-differenced y data
+lasso3.ng.fd = lasso333ng(data = ngraw[-1,], tcode = t.ng, yr=fd.yr2)
+trace3.ng.fd = trace.plot.table(lasso3.ng.fd$lasso, lambda.seq.fd, lasso3.ng.fd$lambda)
+lasso3.aic.fd = lasso333ng(data = ngraw[-1,], tcode = t.aic, yr=fd.yr2)
+trace3.aic.fd = trace.plot.table(lasso3.aic.fd$lasso, lambda.seq.fd, lasso3.aic.fd$lambda)
+lasso3.bic.fd = lasso333ng(data = ngraw[-1,], tcode = t.bic, yr=fd.yr2)
+trace3.bic.fd = trace.plot.table(lasso3.bic.fd$lasso, lambda.seq.fd, lasso3.bic.fd$lambda)
+sum3.fd = sumtable(trace3.ng.fd, trace3.aic.fd, trace3.bic.fd)
+colnames(sum3.fd) = c("", "NG", "AIC", "BIC")
+#pander(sum3.fd, caption = "Lasso 3, non-zero coefficients, detrended y series")
+write.csv(sum3.fd, "/Users/stanza/documents/github/lasso/ng/lasso3_fd.csv")
+```
+
+
+```{r include=F, message=F, warning=F, echo=F, eval=F}
 description = data.frame(`Short description` = c("hsmw",
                                    "hsbsou",
                                    "lhel",
