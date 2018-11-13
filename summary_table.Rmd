@@ -4,6 +4,7 @@ author: ""
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output: pdf_document
 classoption: landscape
+geometry: margin=0.5cm
 ---
 
 ```{r, echo=F, message=F, include=F}
@@ -14,6 +15,8 @@ info.table = readRDS(file =  "/Users/stanza/documents/github/lasso/info_table.rd
 pander::pander(info.table, justify = "left" , split.table = Inf , 
                split.cell = 80 , caption = "Models information")
 table1 = rbind(info.table , sum.table)
+table1 = table1[,-(4:5)]
+table1 = cbind(ADF = c(rep("", 12) , 0, 1, 0, 0, 0, 1, 1, rep(0, 7), 1), table1)
 ```
 
 

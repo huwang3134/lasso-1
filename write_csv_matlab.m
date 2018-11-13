@@ -4,8 +4,8 @@ short = cell2table(bplabvec_short);
 bpraw = array2table(bpdata_raw);
 bptrans = array2table(bpdata);
 
-writetable(bpraw, '/Users/stanza/Desktop/lasso_r/bpraw.csv')
-writetable(tcode, '/Users/stanza/Desktop/lasso_r/tcode.csv')
-writetable(short, '/Users/stanza/Desktop/lasso_r/short.csv','Encoding','UTF-8')
-writetable(long, '/Users/stanza/Desktop/lasso_r/long.csv','Encoding','UTF-8')
-writetable(bptrans, '/Users/stanza/Desktop/lasso_r/bptrans.csv')
+writetable(bpraw, '/Users/stanza/Desktop/bpraw.csv')
+writetable(tcode, '/Users/stanza/Desktop/tcode.csv')
+writetable(short, '/Users/stanza/Desktop/short.csv','Encoding','UTF-8')
+writetable(long, '/Users/stanza/Desktop/long.csv','Encoding','UTF-8')
+writetable(bptrans, '/Users/stanza/Desktop/bptrans.csv')

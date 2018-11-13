@@ -14,6 +14,8 @@ library("knitr")
 library("ggrepel")
 library("pander")
 library("kableExtra")
+library("tseries")
+library("urca")
 source("/Users/stanza/documents/github/lasso/fun.R")
 ```
 
@@ -24,7 +26,6 @@ bptrans <- read.csv("/Users/stanza/documents/github/lasso/bptrans.csv", na.strin
 tcode <- read.csv("/Users/stanza/documents/github/lasso/tcode.csv", stringsAsFactors = F) 
 short <- read.csv("/Users/stanza/documents/github/lasso/short.csv", stringsAsFactors = F) %>% unname()
 long <- read.csv("/Users/stanza/documents/github/lasso/long.csv", stringsAsFactors = F) %>% unname()
-# need to remove the copyright symbol from the long.csv
 idx <- apply(bpraw, 2, anyNA) %>% which() %>% unname()
 colnames(bpraw) = short
 colnames(bptrans) = short
@@ -75,29 +76,20 @@ x[ , x.tcode==5 | x.tcode==6] = log( x[ , x.tcode==5 | x.tcode==6] )
 # first difference
 xtem.1 = x[-1,] # tem (2-224=223)
 xtem.1[ , x.tcode==6] <- diff( x[ , x.tcode==6] )
+colnames(xtem.1)[x.tcode==2 | x.tcode==5 | x.tcode==6] = 
+  paste0(colnames(xtem.1)[x.tcode==2 | x.tcode==5 | x.tcode==6], ".level")
 x.1 = lag1(maxlag.1 , xtem.1) %>% scale() # explanatory variables (2-223=222), done
 p.1 = dim(x.1)[2]
 n.1 = dim(x.1)[1]
 lambda.fix.1 = sqrt(log( p.1 ) / n.1 )
 # fit model, collect data
-lasso.1 = glmnet(x.1, y.1, alpha=1, thresh=1E-10, lambda= lambda.seq1, maxit = 10^9)
+lasso.1 = glmnet(x.1, y.1, alpha=1, thresh=1E-5, lambda= lambda.seq1, maxit = 10^9)
 trace1 = trace.plot.table(lasso.1, lambda.seq1, lambda.fix.1)
 fitted.1 = predict(lasso.1 , s=lambda.seq1[which.min(abs(lambda.seq1-lambda.fix.1))] , newx = x.1)
 mse.1 = mean((y.1-fitted.1)^2)
 mse.out1 = out.mse(x.1, y.1, lambda.seq1, p.1)
-# experiment with levels only
-test.x <- bpraw %>% data.matrix()
-test.x[ , tcode==5 | tcode==6] = log(test.x[ , tcode==5 | tcode==6])
-test.xtem = test.x[-1,]
-test.xtem[ , tcode==6] <- diff(test.x[ , tcode==6])
-test.x1 = lag1(maxlag.1, test.xtem) %>% scale()
-test.x1 = test.x1[ , tcode==5 | tcode==6]
-lambda.test = sqrt(log( dim(test.x1)[2] ) / dim(test.x1)[1] )
-lasso.test = glmnet(test.x1, y.1, alpha=1, thresh=1E-10, lambda= lambda.seq1, maxit = 10^9)
-test.trace = trace.plot.table(lasso.test, lambda.seq1, lambda.test)
-test.trace$plot
-test.trace$table
 ```
+
 
 The regression being estimated is:
 $$\Delta y_t = I(0)_{t-1}
@@ -152,7 +144,7 @@ lambda.fix.2 = sqrt(log( p.2 ) / n.2 )
 trans.2 = "1 less differenced"
 vecm.2 = TRUE
 # fit model, collect data
-lasso.2 = glmnet(x.2, y.2, alpha=1, thresh=1E-10, lambda= lambda.seq2, maxit = 10^9)
+lasso.2 = glmnet(x.2, y.2, alpha=1, thresh=1E-5, lambda= lambda.seq2, maxit = 10^9)
 trace2 = trace.plot.table(lasso.2, lambda.seq2, lambda.fix.2)
 fitted.2 = predict(lasso.2 , s=lambda.seq2[which.min(abs(lambda.seq2-lambda.fix.2))] , newx = x.2)
 mse.2 = mean((y.2-fitted.2)^2)
@@ -203,7 +195,7 @@ lambda.fix.3 = sqrt(log( p.3 ) / n.3 )
 trans.3 = "All stationary"
 vecm.3 = TRUE
 # fit model, collect data
-lasso.3 = glmnet(x.3, y.3, alpha=1, thresh=1E-10, lambda= lambda.seq3, maxit = 10^9)
+lasso.3 = glmnet(x.3, y.3, alpha=1, thresh=1E-5, lambda= lambda.seq3, maxit = 10^9)
 trace3 = trace.plot.table(lasso.3, lambda.seq3, lambda.fix.3)
 fitted.3 = predict(lasso.3 , s=lambda.seq3[which.min(abs(lambda.seq3-lambda.fix.3))] , newx = x.3)
 mse.3 = mean((y.3-fitted.3)^2)
@@ -252,7 +244,7 @@ lambda.fix.4 = sqrt(log( p.4 ) / n.4 )
 trans.4 = "All stationary"
 vecm.4 = TRUE
 # fit model, collect data
-lasso.4 = glmnet(x.4, y.4, alpha=1, thresh=1E-10, lambda= lambda.seq4, maxit = 10^9)
+lasso.4 = glmnet(x.4, y.4, alpha=1, thresh=1E-5, lambda= lambda.seq4, maxit = 10^9)
 trace4 = trace.plot.table(lasso.4, lambda.seq4, lambda.fix.4)
 fitted.4 = predict(lasso.4 , s=lambda.seq4[which.min(abs(lambda.seq4-lambda.fix.4))] , newx = x.4)
 mse.4 = mean((y.4-fitted.4)^2)
@@ -296,7 +288,7 @@ lambda.fix.5 = sqrt(log( p.5 ) / n.5 )
 trans.5 = "All stationary"
 vecm.5 = TRUE
 # fit model, collect data
-lasso.5 = glmnet(x.5, y.5, alpha=1, thresh=1E-10, lambda= lambda.seq5, maxit = 10^9)
+lasso.5 = glmnet(x.5, y.5, alpha=1, thresh=1E-5, lambda= lambda.seq5, maxit = 10^9)
 trace5 = trace.plot.table(lasso.5, lambda.seq5, lambda.fix.5)
 fitted.5 = predict(lasso.5 , s=lambda.seq5[which.min(abs(lambda.seq5-lambda.fix.5))] , newx = x.5)
 mse.5 = mean((y.5-fitted.5)^2)
@@ -336,7 +328,7 @@ lambda.fix.6 = sqrt(log( p.6 ) / n.6 )
 trans.6 = "All stationary"
 vecm.6 = TRUE
 # fit model, collect data
-lasso.6 = glmnet(x.6, y.6, alpha=1, thresh=1E-10, lambda= lambda.seq6, maxit = 10^9)
+lasso.6 = glmnet(x.6, y.6, alpha=1, thresh=1E-5, lambda= lambda.seq6, maxit = 10^9)
 trace6 = trace.plot.table(lasso.6, lambda.seq6, lambda.fix.6)
 fitted.6 = predict(lasso.6 , s=lambda.seq6[which.min(abs(lambda.seq6-lambda.fix.6))] , newx = x.6)
 mse.6 = mean((y.6-fitted.6)^2)
@@ -359,7 +351,7 @@ lambda.fix.7 = sqrt(log( p.7 ) / n.7 )
 trans.7 = "Combined"
 vecm.7 = TRUE
 # fit model, collect data
-lasso.7 = glmnet(x.7, y.7, alpha=1, thresh=1E-10, lambda= lambda.seq7, maxit = 10^9)
+lasso.7 = glmnet(x.7, y.7, alpha=1, thresh=1E-5, lambda= lambda.seq7, maxit = 10^9)
 trace7 = trace.plot.table(lasso.7, lambda.seq7, lambda.fix.7)
 fitted.7 = predict(lasso.7 , s=lambda.seq7[which.min(abs(lambda.seq7-lambda.fix.7))] , newx = x.7)
 mse.7 = mean((y.7-fitted.7)^2)
@@ -420,24 +412,146 @@ I(2) series were second-differenced;
 
 3, after first difference, second difference and 4 lags, we have 218 observations (lost 6). -->
 
-### Experiment Lasso
+### Lasso 8 (no spread)
 
-Remove "CP_Tbill Spread" in lasso 7.
+"tb6m_tb3m, GS1_tb3m, GS10_tb3m, CP_Tbill Spread" were omitted to prevent from multicollinearity.
+"CP3FM" was added. (file path of data file is changed in "datain_all.m", 24th Oct)
+
+This model is same with the lasso 1, only difference is the removed four I(0) series, and the added one I(1) series.
+
+Among the four non-zero coefficients, two of them are I(1), the other two are I(0) according to ADF test. However, the linear combination (using the estimated coefficients) of the two I(1) is not I(0). 
 
 ```{r, echo=F, message=F, warning=F}
-# experiment with level only
-test.x <- bpraw %>% data.matrix()
-test.x[ , tcode==5 | tcode==6] = log(test.x[ , tcode==5 | tcode==6])
-test.xtem = test.x[-1,]
-test.xtem[ , tcode==6] <- diff(test.x[ , tcode==6])
-test.x1 = lag1(maxlag.1, test.xtem) %>% scale()
-test.x1 = test.x1[ , tcode==5 | tcode==6]
-lambda.test = sqrt(log( dim(test.x1)[2] ) / dim(test.x1)[1] )
-lasso.test = glmnet(test.x1, y.1, alpha=1, thresh=1E-10, lambda= lambda.seq1, maxit = 10^9)
-test.trace = trace.plot.table(lasso.test, lambda.seq1, lambda.test)
-fitted.test = predict(lasso.test , s=lambda.seq1[which.min(abs(lambda.seq1-lambda.test))] , newx = test.x1)
-mse.test = mean((y.1-fitted.test)^2)
-mse.out.test = out.mse(test.x1, y.1, lambda.seq1, dim(test.x1)[2])
+bpraw2 <- read.csv("/Users/stanza/documents/github/lasso/new/bpraw.csv") 
+bptrans2 <- read.csv("/Users/stanza/documents/github/lasso/new/bptrans.csv", na.strings = NaN)
+tcode2 <- read.csv("/Users/stanza/documents/github/lasso/new/tcode.csv", stringsAsFactors = F) 
+short2 <- read.csv("/Users/stanza/documents/github/lasso/new/short.csv", stringsAsFactors = F) %>% unname()
+long2 <- read.csv("/Users/stanza/documents/github/lasso/new/long.csv", stringsAsFactors = F) %>% unname()
+# remove NA
+idx2 <- apply(bpraw2, 2, anyNA) %>% which() %>% unname()
+colnames(bpraw2) = short2
+colnames(bptrans2) = short2
+bpraw2 <- bpraw2[ , -idx2]
+bptrans2 <- bptrans2[, -idx2] %>% na.omit()
+tcode2 <- tcode2[-idx2,] 
+short2 <- short2[, -idx2] %>% t() %>% as.vector()
+long2 <- long2[, -idx2] %>% t() %>% as.vector()
+inves.raw2 <- bpraw2
+inves.tran2 <- bptrans2
+inves.tcode2 <- tcode2
+inves.short2 <- short2
+inves.long2 <- long2
+# remove "tb6m_tb3m, GS1_tb3m, GS10_tb3m, CP_Tbill Spread"
+tcode2 <- tcode2[colnames(bpraw2) != "tb6m_tb3m" & colnames(bpraw2) != "GS1_tb3m" &
+                    colnames(bpraw2) != "GS10_tb3m" & colnames(bpraw2) != "CP_Tbill Spread"]
+short2 <- short2[colnames(bpraw2) != "tb6m_tb3m" & colnames(bpraw2) != "GS1_tb3m" &
+                    colnames(bpraw2) != "GS10_tb3m" & colnames(bpraw2) != "CP_Tbill Spread"]
+long2 <- long2[colnames(bpraw2) != "tb6m_tb3m" & colnames(bpraw2) != "GS1_tb3m" &
+                    colnames(bpraw2) != "GS10_tb3m" & colnames(bpraw2) != "CP_Tbill Spread"]
+bpraw2 <- bpraw2[ , colnames(bpraw2) != "tb6m_tb3m" & colnames(bpraw2) != "GS1_tb3m" &
+                    colnames(bpraw2) != "GS10_tb3m" & colnames(bpraw2) != "CP_Tbill Spread"]
+bptrans2 <- bptrans2[ , colnames(bptrans2) != "tb6m_tb3m" & colnames(bptrans2) != "GS1_tb3m" &
+                    colnames(bptrans2) != "GS10_tb3m" & colnames(bptrans2) != "CP_Tbill Spread"]
+# clean data
+maxlag.8 = 1
+y.8 =  bpraw2[,1] %>% log() %>% diff() %>% lag0(maxlag = maxlag.8, .) %>% scale() # (2-224=223)
+x8 <- bpraw2[, -1] %>% data.matrix()
+x.tcode2 = tcode2[-1] 
+lambda.seq8 <- seq(0.5, 0, -0.0025)
+trans.8 = "1 less differenced"
+# log() transformation
+x8[ , x.tcode2==5 | x.tcode2==6] = log( x8[ , x.tcode2==5 | x.tcode2==6] )
+# first difference
+xtem.8 = x8[-1,] # tem (2-224=223)
+xtem.8[ , x.tcode2==6] <- diff( x8[ , x.tcode2==6] )
+colnames(xtem.8)[x.tcode2==2 | x.tcode2==5 | x.tcode2==6] = 
+  paste0(colnames(xtem.8)[x.tcode2==2 | x.tcode2==5 | x.tcode2==6], ".level")
+x.8 = lag1(maxlag.8 , xtem.8) %>% scale() # explanatory variables (2-223=222), done
+p.8 = dim(x.8)[2]
+n.8 = dim(x.8)[1]
+lambda.fix.8 = sqrt(log( p.8 ) / n.8 )
+# fit model, collect data
+lasso.8 = glmnet(x.8, y.8, alpha=1, thresh=1E-5, lambda= lambda.seq8, maxit = 10^9)
+trace8 = trace.plot.table(lasso.8, lambda.seq8, lambda.fix.8)
+fitted.8 = predict(lasso.8 , s=lambda.seq8[which.min(abs(lambda.seq8-lambda.fix.8))] , newx = x.8)
+mse.8 = mean((y.8-fitted.8)^2)
+mse.out8 = out.mse(x.8, y.8, lambda.seq8, p.8)
+```
+
+### Lasso 9
+
+```{r, echo=F, message=F, warning=F}
+maxlag.9 = 4
+xtem.9 = bptrans2 %>% lags(maxlag = maxlag.9, .)
+x.9 = lag1(xtem.8[-1, x.tcode2==2 | x.tcode2==5 | x.tcode2==6], maxlag = maxlag.9) %>% cbind(., xtem.9) %>% scale()
+y.9 = lag0(y.8, maxlag = maxlag.9) %>% scale()
+lambda.seq9 <- seq(0.5, 0, -0.0025)
+p.9 = dim(x.9)[2]
+n.9 = dim(x.9)[1]
+lambda.fix.9 = sqrt(log( p.9 ) / n.9 )
+# fit model, collect data
+lasso.9 = glmnet(x.9, y.9, alpha=1, thresh=1E-5, lambda= lambda.seq9, maxit = 10^9)
+trace9 = trace.plot.table(lasso.9, lambda.seq9, lambda.fix.9)
+fitted.9 = predict(lasso.9 , s=lambda.seq9[which.min(abs(lambda.seq9-lambda.fix.9))] , newx = x.9)
+mse.9 = mean((y.9-fitted.9)^2)
+mse.out9 = out.mse(x.9, y.9, lambda.seq9, p.9)
+```
+
+
+### Investigation of the non-zero coefficients
+
+```{r, echo=F, message=F, warning=F, eval=FALSE}
+# investigate the non-zero series in all lasso models
+inves.1 = x.1[, colnames(x.1) %in% (trace1$coef[,2] %>% as.character())]
+inves.2 = x.2[, colnames(x.2) %in% (trace2$coef[,2] %>% as.character())]
+inves.3 = x.3[, colnames(x.3) %in% (trace3$coef[,2] %>% as.character())]
+inves.4 = x.4[, colnames(x.4) %in% (trace4$coef[,2] %>% as.character())]
+inves.5 = x.5[, colnames(x.5) %in% (trace5$coef[,2] %>% as.character())]
+inves.6 = x.6[, colnames(x.6) %in% (trace6$coef[,2] %>% as.character())]
+inves.7 = x.7[, colnames(x.7) %in% (trace7$coef[,2] %>% as.character())]
+inves.8 = x.8[, colnames(x.8) %in% (trace8$coef[,2] %>% as.character())]
+inves.9 = x.9[, colnames(x.9) %in% (trace9$coef[,2] %>% as.character())]
+AA = rbind(adf.auto(inves.1, criteria = "AIC") , adf.auto(inves.2, criteria = "AIC") , 
+      adf.auto(inves.5, criteria = "AIC") , adf.auto(inves.6, criteria = "AIC") , adf.auto(inves.7, criteria = "AIC") , adf.auto(inves.8, criteria = "AIC") ,
+      adf.auto(inves.9, criteria = "AIC")) %>% unique() 
+BB = rbind(adf.auto(inves.1, criteria = "BIC") , adf.auto(inves.2, criteria = "BIC") , 
+      adf.auto(inves.5, criteria = "BIC") , adf.auto(inves.6, criteria = "BIC") , adf.auto(inves.7, criteria = "BIC") , adf.auto(inves.8, criteria = "BIC") ,
+      adf.auto(inves.9, criteria = "BIC")) %>% unique() 
+AABB = left_join(AA, BB, by = "Series")
+AABB = AABB[,-3]
+AABB = AABB[,c(1,2,3,4,6,5)]
+colnames(AABB) = c("Series", "AIC", "AIC lags", "BIC", "BIC lags", "Type")
+```
+
+### Investigation of the all variables
+
+```{r, echo=F, message=F, warning=F}
+sw2 = inves.raw2[,inves.tcode2==6]
+adf.auto(sw2, criteria = "AIC")
+inves.raw2[,inves.tcode2==5 | inves.tcode2==6] = 
+  inves.raw2[,inves.tcode2==5 | inves.tcode2==6] %>% log()
+temp = apply(inves.raw2[,inves.tcode2==6], 2, diff)
+temp = rbind(NA, temp)
+inves.raw2[,inves.tcode2==6] = temp
+adf.aic = adf.auto(inves.raw2, criteria = "AIC")
+adf.bic = adf.auto(inves.raw2, criteria = "BIC")
+sw = data.frame(Series = colnames(inves.raw2), SW = character(length = 146), 
+                  stringsAsFactors = FALSE)
+sw$SW[inves.tcode2==1] = "I(0)"
+sw$SW[inves.tcode2==2] = "I(1)"
+sw$SW[inves.tcode2==5] = "I(1)"
+sw$SW[inves.tcode2==6] = "I(2)"
+aabbss <- left_join(sw, adf.aic, by = "Series") %>% left_join(., adf.bic, by = "Series")
+aabbss <- aabbss[,-4]
+aabbss <- aabbss[,c(1,2,3,5,6,4,7)]
+colnames(aabbss) = c("Series", "SW", "AIC", "BIC", "Type", "AIC lags", "BIC lags")
+tt = aabbss[inves.tcode2==6,]
+tt$AIC[tt$AIC=="I(1)"] <- "I(2)"
+tt$BIC[tt$BIC=="I(1)"] <- "I(2)"
+tt$AIC[tt$AIC=="I(0)"] <- "I(1)"
+tt$BIC[tt$BIC=="I(0)"] <- "I(1)"
+aabbss[inves.tcode2==6,] = tt
+saveRDS(aabbss, file = "/Users/stanza/documents/github/lasso/compare.rds")
 ```
 
 ## Graphs
@@ -465,8 +579,11 @@ plot6 + labs(subtitle = "Lasso 6")
 plot7 = trace7$plot
 plot7 + labs(subtitle = "Lasso 7")
 
-plot9 = test.trace$plot
-plot9 + ylim(-1, 1) + labs(subtitle = "Experiment Lasso, y is truncated to (-1, 1)")
+plot8 = trace8$plot
+plot8 + ylim(-1, 1) + labs(subtitle = "Lasso 8, y is truncated to (-1, 1)")
+
+plot9 = trace9$plot
+plot9 + labs(subtitle = "Lasso 9")
 ```
 
 
@@ -480,7 +597,8 @@ variable = c(trace1$coef[,2] %>% as.character(),
              trace5$coef[,2] %>% as.character(), 
              trace6$coef[,2] %>% as.character(),
              trace7$coef[,2] %>% as.character(),
-             test.trace$coef[,2] %>% as.character()) %>% unique() %>% 
+             trace8$coef[,2] %>% as.character(),
+             trace9$coef[,2] %>% as.character()) %>% unique() %>% 
   as.data.frame(stringsAsFactors = FALSE)
 colnames(variable) = "variable"
 sum.table = left_join(variable, trace1$coef[,2:3]) %>% 
@@ -490,11 +608,12 @@ sum.table = left_join(variable, trace1$coef[,2:3]) %>%
   left_join(., trace5$coef[,2:3], by = "variable") %>%
   left_join(., trace6$coef[,2:3], by = "variable") %>% 
   left_join(., trace7$coef[,2:3], by = "variable") %>% 
-  left_join(., test.trace$coef[,2:3], by = "variable") %>% 
+  left_join(., trace8$coef[,2:3], by = "variable") %>% 
+  left_join(., trace9$coef[,2:3], by = "variable") %>% 
   as.data.frame(stringsAsFactors = FALSE)
 sum.table[ , -1] = round(sum.table[ , -1] , digits = 6)
 colnames(sum.table) = c("" , "Lasso 1" , "Lasso 2" , "Lasso 3" , 
-                        "Lasso 4" , "Lasso 5" , "Lasso 6", "Lasso 7", "Exp Lasso")
+                        "Lasso 4" , "Lasso 5" , "Lasso 6", "Lasso 7", "Lasso 8", "Lasso 9")
 
 info.table = c("0" , "0" , "1", "0" , "0" , "1" , "1") %>% 
   cbind(c("1" , "4" , "1" , "0" , "0" , "1" , "1")) %>% 
@@ -503,41 +622,31 @@ info.table = c("0" , "0" , "1", "0" , "0" , "1" , "1") %>%
   cbind(c("1" , "2" , "2" , "2" , "2" , "0" , "0")) %>% 
   cbind(c("1" , "1" , "1" , "1" , "1" , "0" , "0")) %>% 
   cbind(c("0" , "4" , "4" , "4" , "4" , "1" , "1")) %>% 
-  cbind(c("1" , "0" , "0" , "0" , "0" , "1" , "1")) %>% 
-  rbind(c(n.1 , n.2 , n.3 , n.4 , n.5 , n.6 , n.7 , dim(test.x1)[1])) %>%
-  rbind(c(p.1 , p.2 , p.3 , p.4 , p.5 , p.6 , p.7 , dim(test.x1)[2])) %>%
+  cbind(c("0" , "0" , "1", "0" , "0" , "1" , "1")) %>% 
+  cbind(c("0" , "0" , "4", "4" , "4" , "1" , "1")) %>%
+  rbind(c(n.1 , n.2 , n.3 , n.4 , n.5 , n.6 , n.7 , n.8, n.9)) %>%
+  rbind(c(p.1 , p.2 , p.3 , p.4 , p.5 , p.6 , p.7 , p.8, p.9)) %>%
   rbind(round(c(lambda.fix.1 , lambda.fix.2 , lambda.fix.3 , 
           lambda.fix.4 , lambda.fix.5 , lambda.fix.6 , 
-          lambda.fix.7 , lambda.test), digits = 4)) %>% 
-  rbind(round(c(mse.1 , mse.2 , mse.3 , mse.4 , mse.5 , mse.6 , mse.7 , mse.test) , digits=5)) %>% 
+          lambda.fix.7 , lambda.fix.8, lambda.fix.9), digits = 4)) %>% 
+  rbind(round(c(mse.1 , mse.2 , mse.3 , mse.4 , mse.5 , mse.6 , mse.7 , mse.8, mse.9) , digits=5)) %>% 
   rbind(round(c(mse.out1 , mse.out2 , mse.out3 , mse.out4 , mse.out5 , mse.out6 , 
-                mse.out7 , mse.out.test) , digits=5)) %>% 
+                mse.out7 , mse.out8, mse.out9) , digits=5)) %>% 
   cbind(c("y.lag1", "D.y.lags", "I(0).lags" ,"D.I(1).lags",
                      "D2.I(2).lags", "I(1).lags", "D.I(2).lags", 
                "#obs" , "#regressors" , "Fixed Lambda" , "MSE.in", "MSE.out") , .) %>% 
   as.data.frame(stringsAsFactors = FALSE)
 colnames(info.table) = c("" , "Lasso 1" , "Lasso 2" , "Lasso 3" , 
-                        "Lasso 4" , "Lasso 5" , "Lasso 6", "Lasso 7", "Exp Lasso") 
+                        "Lasso 4" , "Lasso 5" , "Lasso 6", "Lasso 7", "Lasso 8", "Lasso 9") 
 
 saveRDS(sum.table, file = "/Users/stanza/documents/github/lasso/sum_table.rds")
 saveRDS(info.table, file = "/Users/stanza/documents/github/lasso/info_table.rds")
 ```
 
 
-
-```{r, echo=F, message=F, warning=F, eval=F}
-## C.V.
-cv7 = cv.glmnet(x.7, y.7, lambda = lambda.seq7,  alpha=1)
-coef7 = coef(cv7, s="lambda.min") %>%
-     as.matrix() %>% as.data.frame(stringsAsFactors = F, row.names = NULL)
- colnames(coef7) = "coef"
-no.coef7 = subset(coef7, coef != 0)
-```
-
-
 ## Data transformation table
 
-```{r, results='asis', echo=F, warning=F, message=F, eval=T}
+```{r, results='asis', echo=F, warning=F, message=F}
 t.data <- tibble(tcode, short, long) 
 
 t1 <- t.data[t.data$tcode==1, ] 
@@ -577,7 +686,7 @@ lambda.fix.8 = sqrt(log( p.8 ) / n.8 )
 trans.8 = "Combined"
 vecm.8 = TRUE
 # fit model, collect data
-lasso.8 = glmnet(x.8, y.8, alpha=1, thresh=1E-10, lambda= lambda.seq8, maxit = 10^9)
+lasso.8 = glmnet(x.8, y.8, alpha=1, thresh=1E-5, lambda= lambda.seq8, maxit = 10^9)
 trace8 = trace.plot.table(lasso.8, lambda.seq8, lambda.fix.8)
 fitted.8 = predict(lasso.8 , s=lambda.seq8[which.min(abs(lambda.seq8-lambda.fix.8))] , newx = x.8)
 mse.8 = mean((y.8-fitted.8)^2)
@@ -587,10 +696,78 @@ mse.out8 = out.mse(x.8, y.8, lambda.seq8, p.8)
 
 
 
+```{r, echo=F, message=F, warning=F, eval=F}
+## C.V.
+cv7 = cv.glmnet(x.7, y.7, lambda = lambda.seq7,  alpha=1)
+coef7 = coef(cv7, s="lambda.min") %>%
+     as.matrix() %>% as.data.frame(stringsAsFactors = F, row.names = NULL)
+ colnames(coef7) = "coef"
+no.coef7 = subset(coef7, coef != 0)
+```
 
 
+```{r, eval=F, echo=F}
+# experiment with levels only
+test.x <- bpraw %>% data.matrix()
+test.x[ , tcode==5 | tcode==6] = log(test.x[ , tcode==5 | tcode==6])
+test.xtem = test.x[-1,]
+test.xtem[ , tcode==6] <- diff(test.x[ , tcode==6])
+test.x1 = lag1(maxlag.1, test.xtem) %>% scale()
+test.x1 = test.x1[ , tcode==5 | tcode==6]
+lambda.test = sqrt(log( dim(test.x1)[2] ) / dim(test.x1)[1] )
+lasso.test = glmnet(test.x1, y.1, alpha=1, thresh=1E-5, lambda= lambda.seq1, maxit = 10^9)
+test.trace = trace.plot.table(lasso.test, lambda.seq1, lambda.test)
+test.trace$plot
+test.trace$table
+```
 
 
+```{r, echo=FALSE, eval=FALSE}
+`Ch. Inv/GDP.lag1` = x.8[, colnames(x.8) == "Ch. Inv/GDP.lag1"]
+`IP: Dur gds materials.level.lag1` = x.1[, colnames(x.1) == "IP: Dur gds materials.level.lag1"]
+`NAPM:ORD.lag1` = x.8[, colnames(x.8) == "NAPM:ORD.lag1"]
+`CP_Tbill Spread.lag1` = x.1[, colnames(x.1) == "CP_Tbill Spread.lag1"]
+`Ex rate: major.level.lag1` = x.1[, colnames(x.1) == "Ex rate: major.level.lag1"]
+`Cons. Expectations.lag1` = x.8[, colnames(x.8) == "Cons. Expectations.lag1"]
+`UnfOrders(DurGds).level.lag1` = x.2[, colnames(x.2) == "UnfOrders(DurGds).level.lag1"]
+`Cons:Svc.lag1` = x.4[, colnames(x.4) == "Cons:Svc.lag1"]
+`FixedInv:Res.lag1` = x.6[, colnames(x.6) == "FixedInv:Res.lag1"]
+`IP: Nondur gds materials.lag1` = x.6[, colnames(x.6) == "IP: Nondur gds materials.lag1"]
+`Emp:SlackWk.lag1` = x.7[, colnames(x.7) == "Emp:SlackWk.lag1"]
+`CPI_LFE.lag2` = x.5[, colnames(x.5) == "CPI_LFE.lag2"]
+`S&P 500.lag1` = x.6[, colnames(x.6) == "S&P 500.lag1"]
+`DJIA.lag1` = x.6[, colnames(x.6) == "DJIA.lag1"]
+`Emp: Const.level.lag1` = x.8[, colnames(x.8) == "Emp: Const.level.lag1"]
+# ADF test
+`Ch. Inv/GDP.lag1` %>% adf.auto() %>% pander(caption="Ch. Inv/GDP.lag1")
+`IP: Dur gds materials.level.lag1` %>% adf.auto() %>% pander(caption="IP: Dur gds materials.level.lag1")
+`NAPM:ORD.lag1` %>% adf.auto() %>% pander(caption = "NAPM:ORD.lag1")
+`CP_Tbill Spread.lag1` %>% adf.auto() %>% pander(caption = "CP_Tbill Spread.lag1")
+`Ex rate: major.level.lag1` %>% adf.auto() %>% pander(caption = "Ex rate: major.level.lag1")
+`Cons. Expectations.lag1` %>% adf.auto() %>% pander(caption = "Cons. Expectations.lag1")
+`UnfOrders(DurGds).level.lag1` %>% adf.auto() %>% pander(caption= "UnfOrders(DurGds).level.lag1")
+`Cons:Svc.lag1` %>% adf.auto() %>% pander(caption = "Cons:Svc.lag1")
+`FixedInv:Res.lag1` %>% adf.auto() %>% pander(caption="FixedInv:Res.lag1")
+`IP: Nondur gds materials.lag1` %>% adf.auto() %>% pander(caption="IP: Nondur gds materials.lag1")
+`Emp:SlackWk.lag1` %>% adf.auto() %>% pander(caption="Emp:SlackWk.lag1")
+`CPI_LFE.lag2` %>% adf.auto() %>% pander(caption="CPI_LFE.lag2")
+`S&P 500.lag1` %>% adf.auto() %>% pander(caption="S&P 500.lag1")
+`DJIA.lag1` %>% adf.auto() %>% pander(caption="DJIA.lag1")
+`Emp: Const.level.lag1` %>% adf.auto() %>% pander(caption="Emp: Const.level.lag1")
+```
+
+```{r, echo=F, message=F, warning=F, eval=F}
+ggplot(data=as.data.frame(x.8) , aes(x=(1:222), y=`Emp: Const.lag1`)) + geom_line() + xlab("time")
+
+
+ggplot(data=as.data.frame(x.8) , aes(x=(1:222), y=`Cons. Expectations.lag1`)) + geom_line() + xlab("time")
+
+
+ggplot(data=as.data.frame(x.8) , aes(x=(1:222), y=`NAPM:ORD.lag1`)) + geom_line() + xlab("time")
+
+
+ggplot(data=as.data.frame(x.8) , aes(x=(1:222), y=`Ch. Inv/GDP.lag1`)) + geom_line() + xlab("time")
+```
 
 
 

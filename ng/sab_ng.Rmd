@@ -1,0 +1,356 @@
+---
+title: "NG and ADF test (excess return)"
+author: "Shuofan Zhang"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: pdf_document
+---
+
+```{r, include=T, echo=F, warning=F, 	message = FALSE}
+library("glmnet")
+library("reshape2")
+library("cellranger")
+library("tidyverse")
+library("knitr")
+library("ggrepel")
+library("pander")
+library("kableExtra")
+library("tseries")
+library("urca")
+source("/Users/stanza/documents/github/lasso/fun.R")
+```
+
+## Data
+
+Data: 131-8=123 series in total.
+
+The "spread" series (difference between two I(1) series) are removed.
+
+log() is done.
+
+
+```{r echo=F, message=F, warning=F}
+maxlag = 4
+ngraw <- read.csv("/Users/stanza/documents/github/lasso/ng/ngraw.csv")  
+tcode <- read.csv("/Users/stanza/documents/github/lasso/ng/tcode.csv") 
+short <- read.delim2("/Users/stanza/documents/github/lasso/ng/series.txt", header = FALSE,
+                      stringsAsFactors=FALSE) %>% as.data.frame()
+colnames(ngraw) = str_trim(short$V1)
+ydata <- readxl::read_xls("/Users/stanza/documents/github/lasso/ng/yvar.xls")
+ydata <- select(ydata, yr2, yr3, yr4, yr5)
+ydata = ydata %>% mutate(time=(1:480))
+dt.yr2 = lm(data = ydata, yr2 ~ time)$residuals
+dt.yr3 = lm(data = ydata, yr3 ~ time)$residuals
+dt.yr4 = lm(data = ydata, yr4 ~ time)$residuals
+dt.yr5 = lm(data = ydata, yr5 ~ time)$residuals
+yr2 = ydata$yr2
+ngraw = ngraw[1:dim(ydata)[1] , ]
+ngraw[, tcode==4 | tcode==5 | tcode==6] = log(ngraw[, tcode==4 | tcode==5 | tcode==6])
+# keep full set of data before remove "spread"
+full.raw <- ngraw
+full.tcode <- tcode
+full.short <- short
+# remove spread
+idx2 = which(colnames(ngraw) == "scp90" | 
+               colnames(ngraw) == "sfygm3" | 
+               colnames(ngraw) == "sfygm6" | 
+               colnames(ngraw) == "sfygt1" | 
+               colnames(ngraw) == "sfygt5" |
+               colnames(ngraw) == "sfygt10" |
+               colnames(ngraw) == "sfyaaac" |
+               colnames(ngraw) == "sfybaac")
+tcode <- tcode[-idx2, ]
+short <- short[-idx2, ]
+ngraw <- ngraw[ , -idx2]
+```
+
+## ADF test  
+
+Step 1, ADF test to the 146 original series.
+
+Step 2, mark "I(0)" variables as "I(0)".
+
+Step 3, ADF test to the first-differenced 146 series.
+
+Step 4, check for contradictions, found "PCED_RecServices" in AIC.
+
+Step 5, mark "I(1)" variable as "I(2)" (including "PCED_RecServices").
+
+Step 6, mark the rest as "I(1)".
+
+Step 7, repeat the above 6 steps for both "AIC" and "BIC".
+
+
+```{r, echo=F, message=F, warning=F}
+# Investigation of the all variables
+t.aic = data.frame(integration = character(length = 131), stringsAsFactors = FALSE)
+t.bic = data.frame(integration = character(length = 131), stringsAsFactors = FALSE)
+t.ng = data.frame(integration = character(length = 131), stringsAsFactors = FALSE)
+adf.aic = adf.auto(full.raw, criteria = "AIC")
+adf.bic = adf.auto(full.raw, criteria = "BIC")
+t.aic[adf.aic$Conclusion=="I(0)",] = "0"
+t.bic[adf.bic$Conclusion=="I(0)",] = "0"
+diff.full.raw = apply(full.raw , 2, diff)
+adf.aic.diff = adf.auto(diff.full.raw, criteria = "AIC")
+adf.aic = cbind(adf.aic, adf.aic.diff)
+adf.bic.diff = adf.auto(diff.full.raw, criteria = "BIC")
+adf.bic = cbind(adf.bic, adf.bic.diff)
+write.csv(adf.aic, "/Users/stanza/documents/github/lasso/ng/adf_aic_ng.csv")
+write.csv(adf.bic, "/Users/stanza/documents/github/lasso/ng/adf_bic_ng.csv")
+t.aic[adf.aic[,6]=="I(1)",] = "2"
+t.bic[adf.bic[,6]=="I(1)",] = "2"
+t.aic[t.aic=="",] = "1"
+t.bic[t.bic=="",] = "1"
+t.ng[full.tcode==1,] = "0"
+t.ng[full.tcode==2,] = "1"
+t.ng[full.tcode==4,] = "0"
+t.ng[full.tcode==5,] = "1"
+t.ng[full.tcode==6,] = "2"
+full.t.aic = t.aic
+full.t.bic = t.bic
+full.t.ng = t.ng
+t.aic = t.aic[-idx2,]
+t.bic = t.bic[-idx2,]
+t.ng = t.ng[-idx2,]
+```
+
+```{r, echo=F, message=F, warning=F, eval=T}
+# Investigation of the all variables
+inves.raw2 = full.raw
+inves.tcode2 = full.tcode
+ng2 = inves.raw2[,inves.tcode2==6]
+#adf.auto(ng2, criteria = "AIC")
+temp = apply(ng2, 2, diff)
+temp = rbind(NA, temp)
+inves.raw2[,inves.tcode2==6] = temp
+adf.aic = adf.auto(inves.raw2, criteria = "AIC")
+adf.bic = adf.auto(inves.raw2, criteria = "BIC")
+ng = data.frame(Series = colnames(inves.raw2), ng = character(length = 131), 
+                  stringsAsFactors = FALSE)
+ng$ng[inves.tcode2==1] = "I(0)"
+ng$ng[inves.tcode2==2] = "I(1)"
+ng$ng[inves.tcode2==4] = "I(0)"
+ng$ng[inves.tcode2==5] = "I(1)"
+ng$ng[inves.tcode2==6] = "I(2)"
+aabbss <- left_join(ng, adf.aic, by = "Series") %>% left_join(., adf.bic, by = "Series")
+aabbss <- aabbss[,-4]
+aabbss <- aabbss[,c(1,2,3,5,6,4,7)]
+colnames(aabbss) = c("Series", "ng", "AIC", "BIC", "Type", "AIC lags", "BIC lags")
+tt = aabbss[inves.tcode2==6,]
+tt$AIC[tt$AIC=="I(1)"] <- "I(2)"
+tt$BIC[tt$BIC=="I(1)"] <- "I(2)"
+tt$AIC[tt$AIC=="I(0)"] <- "I(1)"
+tt$BIC[tt$BIC=="I(0)"] <- "I(1)"
+aabbss[inves.tcode2==6,] = tt
+saveRDS(aabbss, file = "/Users/stanza/documents/github/lasso/ng/compare.rds")
+```
+
+```{r echo=F, warning=F, message=F}
+# Data prepare
+maxlag = 4
+lambda.seq <- seq(0.5, 0, -0.0025)
+#save.image(file = "sab_gdp.RData")
+```
+
+
+## Lasso 1
+
+I(2) is first differenced, others are original.
+
+$$ 
+\begin{split} 
+y_t &= I(0)_{t-1} +  I(0)_{t-2} 
++  I(0)_{t-3} +  I(0)_{t-4} \\
+&+  I(1)_{t-1} +  I(1)_{t-2} 
++  I(1)_{t-3} +  I(1)_{t-4} \\
+&+  \Delta I(2)_{t-1} +  \Delta I(2)_{t-2} 
++  \Delta I(2)_{t-3} +  \Delta I(2)_{t-4}
+\end{split} 
+$$
+
+```{r include=T, message=F, warning=F, echo=F}
+# ng
+lasso1.ng = lasso111ng(data = ngraw, tcode = t.ng, y=yr2)
+trace1.ng = trace.plot.table(lasso1.ng$lasso, lambda.seq, lasso1.ng$lambda)
+# AIC
+lasso1.aic = lasso111ng(data = ngraw, tcode = t.aic, y=yr2)
+trace1.aic = trace.plot.table(lasso1.aic$lasso, lambda.seq, lasso1.aic$lambda)
+# BIC
+lasso1.bic = lasso111ng(data = ngraw, tcode = t.bic, y=yr2)
+trace1.bic = trace.plot.table(lasso1.bic$lasso, lambda.seq, lasso1.bic$lambda)
+
+sum1 = sumtable(trace1.ng, trace1.aic, trace1.bic)
+sum1 = cbind(I1=c("NG", "NG, BIC", "AIC, BIC", "BIC",
+                  "ALL", "NG", "AIC, BIC", "ALL",
+                  "ALL", "NG, BIC", "ALL", "ALL"), sum1)
+colnames(sum1) = c("I1","", "NG", "AIC", "BIC")
+write.csv(sum1, "lasso1.csv")
+```
+```{r include=T, message=F, warning=F, echo=F}
+# detrend y data
+lasso1.ng.dt = lasso111ng(data = ngraw, tcode = t.ng, y=dt.yr2)
+trace1.ng.dt = trace.plot.table(lasso1.ng.dt$lasso, lambda.seq, lasso1.ng.dt$lambda)
+lasso1.aic.dt = lasso111ng(data = ngraw, tcode = t.aic, y=dt.yr2)
+trace1.aic.dt = trace.plot.table(lasso1.aic.dt$lasso, lambda.seq, lasso1.aic.dt$lambda)
+lasso1.bic.dt = lasso111ng(data = ngraw, tcode = t.bic, y=dt.yr2)
+trace1.bic.dt = trace.plot.table(lasso1.bic.dt$lasso, lambda.seq, lasso1.bic.dt$lambda)
+
+sum1.dt = sumtable(trace1.ng.dt, trace1.aic.dt, trace1.bic.dt)
+sum1.dt = cbind(I1=c("BIC", "BIC", "ALL", "ALL", "AIC, BIC", "ALL", "ALL", "AIC, BIC"), sum1.dt)
+colnames(sum1.dt) = c("I1","", "NG", "AIC", "BIC")
+#pander(sum1.dt, caption = "Lasso 1, non-zero coefficients, detrended y series")
+write.csv(sum1.dt, "lasso1_dt.csv")
+```
+
+## Lasso 2
+
+All stationary.
+
+$$ 
+\begin{split} 
+y_t &= I(0)_{t-1} +  I(0)_{t-2} 
++  I(0)_{t-3} +  I(0)_{t-4} \\
+&+  \Delta I(1)_{t-1} +  \Delta I(1)_{t-2} 
++  \Delta I(1)_{t-3} +  \Delta I(1)_{t-4} \\
+&+  \Delta^2 I(2)_{t-1} +  \Delta^2 I(2)_{t-2} 
++  \Delta^2 I(2)_{t-3} +  \Delta^2 I(2)_{t-4}
+\end{split} 
+$$
+
+
+```{r include=T, message=F, warning=F, echo=F}
+# ng
+lasso2.ng = lasso222ng(data = ngraw, tcode = t.ng, y=yr2)
+trace2.ng = trace.plot.table(lasso2.ng$lasso, lambda.seq, lasso2.ng$lambda)
+# AIC
+lasso2.aic = lasso222ng(data = ngraw, tcode = t.aic, y=yr2)
+trace2.aic = trace.plot.table(lasso2.aic$lasso, lambda.seq, lasso2.aic$lambda)
+# BIC
+lasso2.bic = lasso222ng(data = ngraw, tcode = t.bic, y=yr2)
+trace2.bic = trace.plot.table(lasso2.bic$lasso, lambda.seq, lasso2.bic$lambda)
+sum2 = sumtable(trace2.ng, trace2.aic, trace2.bic)
+colnames(sum2) = c("variable", "NG", "AIC", "BIC")
+#pander(sum2, caption = "Lasso 2, non-zero coefficients")
+write.csv(sum2, "lasso2.csv")
+```
+
+```{r include=T, message=F, warning=F, echo=F}
+# detrend y data
+lasso2.ng.dt = lasso222ng(data = ngraw, tcode = t.ng, y=dt.yr2)
+trace2.ng.dt = trace.plot.table(lasso2.ng.dt$lasso, lambda.seq, lasso2.ng.dt$lambda)
+lasso2.aic.dt = lasso222ng(data = ngraw, tcode = t.aic, y=dt.yr2)
+trace2.aic.dt = trace.plot.table(lasso2.aic.dt$lasso, lambda.seq, lasso2.aic.dt$lambda)
+lasso2.bic.dt = lasso222ng(data = ngraw, tcode = t.bic, y=dt.yr2)
+trace2.bic.dt = trace.plot.table(lasso2.bic.dt$lasso, lambda.seq, lasso2.bic.dt$lambda)
+
+sum2.dt = sumtable(trace2.ng.dt, trace2.aic.dt, trace2.bic.dt)
+colnames(sum2.dt) = c("", "NG", "AIC", "BIC")
+#pander(sum2.dt, caption = "Lasso 2, non-zero coefficients, detrended y series")
+write.csv(sum2.dt, "lasso2_dt.csv")
+```
+
+## Lasso 3
+
+Combination of Lasso 1 and 2.
+
+$$ 
+\begin{split} 
+y_t &=I(0)_{t-1} +  I(0)_{t-2} 
++  I(0)_{t-3} +  I(0)_{t-4} \\
+&+  \Delta I(1)_{t-1} +  \Delta I(1)_{t-2} 
++  \Delta I(1)_{t-3} +  \Delta I(1)_{t-4} \\
+&+  \Delta^2 I(2)_{t-1} +  \Delta^2 I(2)_{t-2} 
++  \Delta^2 I(2)_{t-3} +  \Delta^2 I(2)_{t-4} \\
+&+ I(1)_{t-1} + \Delta I(2)_{t-1}
+\end{split} 
+$$
+
+```{r include=T, message=F, warning=F, echo=F}
+# ng
+lasso3.ng = lasso333ng(data = ngraw, tcode = t.ng, y=yr2)
+trace3.ng = trace.plot.table(lasso3.ng$lasso, lambda.seq, lasso3.ng$lambda)
+# AIC
+lasso3.aic = lasso333ng(data = ngraw, tcode = t.aic, y=yr2)
+trace3.aic = trace.plot.table(lasso3.aic$lasso, lambda.seq, lasso3.aic$lambda)
+# BIC
+lasso3.bic = lasso333ng(data = ngraw, tcode = t.bic, y=yr2)
+trace3.bic = trace.plot.table(lasso3.bic$lasso, lambda.seq, lasso3.bic$lambda)
+
+sum3 = sumtable(trace3.ng, trace3.aic, trace3.bic)
+sum3 = cbind(c("AIC, BIC", "BIC", "", "AIC, BIC",
+               "NG", "NG, BIC", "ALL", "ALL", 
+               "ALL", "NG", "NG, BIC"), sum3)
+colnames(sum3) = c("I1","", "NG", "AIC", "BIC")
+#pander(sum3, caption = "Lasso 3, non-zero coefficients")
+write.csv(sum3, "lasso3.csv")
+```
+
+```{r include=T, message=F, warning=F, echo=F}
+# detrend y data
+lasso3.ng.dt = lasso333ng(data = ngraw, tcode = t.ng, y=dt.yr3)
+trace3.ng.dt = trace.plot.table(lasso3.ng.dt$lasso, lambda.seq, lasso3.ng.dt$lambda)
+lasso3.aic.dt = lasso333ng(data = ngraw, tcode = t.aic, y=dt.yr3)
+trace3.aic.dt = trace.plot.table(lasso3.aic.dt$lasso, lambda.seq, lasso3.aic.dt$lambda)
+lasso3.bic.dt = lasso333ng(data = ngraw, tcode = t.bic, y=dt.yr3)
+trace3.bic.dt = trace.plot.table(lasso3.bic.dt$lasso, lambda.seq, lasso3.bic.dt$lambda)
+
+sum3.dt = sumtable(trace3.ng.dt, trace3.aic.dt, trace3.bic.dt)
+colnames(sum3.dt) = c("", "NG", "AIC", "BIC")
+#pander(sum3.dt, caption = "Lasso 3, non-zero coefficients, detrended y series")
+write.csv(sum3.dt, "lasso3_dt.csv")
+```
+
+```{r include=T, message=F, warning=F, echo=F}
+description = data.frame(`Short description` = c("hsmw",
+                                   "hsbsou",
+                                   "lhel",
+                                   "fygt1",
+                                   "exrjan",
+                                   "exrcan",
+                                   "lhu680",
+                                   "ces003",
+                                   "fclbmc",
+                                   "ces140",
+                                   "ces011",
+                                   "ces002",
+                                   "hsbmw",
+                                   "pmcp",
+                                   "pwimsa") ,  
+           `Long description` = c("Housing Starts:Midwest(Thous.U.)S.A." , 
+  "Houses Authorized By Build. Permits:South(Thou.U.)S.A.",
+  "Index Of Help-Wanted Advertising In Newspapers (1967=100;Sa)",
+  "Interest Rate: U.S.Treasury Const Maturities,1-Yr.(percentage Per Ann,Nsa)",
+  "Foreign Exchange Rate: Japan (Yen Per U.S.$)",
+  "Foreign Exchange Rate: Canada (Canadian $ Per U.S.$)",
+  "Unemploy.By Duration: Average(Mean)Duration In Weeks (Sa)",
+  "Employees On Nonfarm Payrolls - Goods-Producing",
+  "Wkly Rp Lg Com'l Banks:Net Change Com'l & Indus Loans(Bil$,Saar)",
+  "Employees On Nonfarm Payrolls - Government",
+  "Employees On Nonfarm Payrolls - Construction",
+  "Employees On Nonfarm Payrolls: Total Private",
+  "Houses Authorized By Build. Permits:Midwest(Thou.U.)S.A.",
+  "Napm Commodity Prices Index (Percent)",
+  "Producer Price Index:I ntermed Mat.Supplies & Components(82=100,Sa)"), stringsAsFactors = FALSE) 
+#%>% pander(justify = "left" , split.table = Inf , split.cell = 80, style = "grid", caption = "Data description")
+write.csv(description, "description.csv")
+```
+
+```{r include=F, message=F, warning=F, echo=F, eval=F}
+t.bic[colnames(ngraw) == substr(sum3[1,1], 1, nchar(sum3[1,1])-5)]
+t.bic[colnames(ngraw) == substr(sum3[2,1], 1, nchar(sum3[2,1])-5)]
+t.bic[colnames(ngraw) == substr(sum3[3,1], 3, nchar(sum3[3,1])-5)]
+t.bic[colnames(ngraw) == substr(sum3[4,1], 1, nchar(sum3[4,1])-5)]
+t.bic[colnames(ngraw) == substr(sum3[5,1], 1, nchar(sum3[5,1])-5)]
+t.bic[colnames(ngraw) == substr(sum3[6,1], 1, nchar(sum3[6,1])-5)]
+t.bic[colnames(ngraw) == substr(sum3[7,1], 1, nchar(sum3[7,1])-5)]
+t.bic[colnames(ngraw) == substr(sum3[8,1], 1, nchar(sum3[8,1])-5)]
+t.bic[colnames(ngraw) == substr(sum3[9,1], 1, nchar(sum3[9,1])-5)]
+t.bic[colnames(ngraw) == substr(sum3[10,1], 1, nchar(sum3[10,1])-5)]
+t.bic[colnames(ngraw) == substr(sum3[11,1], 1, nchar(sum3[11,1])-5)]
+```
+
+
+
+
+
+
+

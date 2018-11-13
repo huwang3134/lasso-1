@@ -57,7 +57,7 @@ diff(log(bpraw[,101])) %>% as.data.frame() %>% ggplot(aes(x=(1:223), y=.)) + geo
 
 diff(log(bpraw[,101])) %>% diff() %>% as.data.frame() %>% ggplot(aes(x=(1:222), y=.)) + geom_line() + labs(caption = "Time plot of second-differenced log(CPI) (first-differenced inflation rate") + xlab("time")
 
-
+ 
 inflation <- bpraw[,101] %>% log() %>% diff() 
 adf.inflation <- adf.test(inflation)
 pander(adf.inflation)
@@ -168,6 +168,8 @@ mse.out2 = out.mse(x.2, y.2, lambda.seq.2, p.2)
 trace2$table
 trace2$plot
 ```
+
+
 
 
 <!--  $y_{t-1}$ is excluded now. This part has been deleted. -->

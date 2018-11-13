@@ -1,0 +1,175 @@
+---
+title: "Lasso with NG data"
+author: "Shuofan Zhang"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: pdf_document
+---
+
+```{r, include=T, echo=F, warning=F, 	message = FALSE}
+library("glmnet")
+library("reshape2")
+library("cellranger")
+library("tidyverse")
+library("knitr")
+library("ggrepel")
+library("pander")
+library("kableExtra")
+library("tseries")
+library("urca")
+source("/Users/stanza/documents/github/lasso/fun.R")
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# y = yr2
+maxlag = 3
+xdata <- read.csv("/Users/stanza/documents/github/lasso/ng/ngraw.csv") 
+series <- read.delim2("/Users/stanza/documents/github/lasso/ng/series.txt", header = FALSE,
+                      stringsAsFactors=FALSE) %>% as.data.frame()
+colnames(xdata) = str_trim(series$V1)
+ydata <- readxl::read_xls("/Users/stanza/documents/github/lasso/ng/yvar.xls")
+ydata <- select(ydata, yr2, yr3, yr4, yr5)
+ydata = ydata %>% mutate(time=(1:480))
+xdata = xdata[1:dim(ydata)[1] ,]
+tcode <- read.csv("/Users/stanza/documents/github/lasso/ng/tcode.csv") 
+melt.y = melt(ydata, id="time")
+ggplot(data=melt.y, aes(color = variable, x=time, y=value)) + geom_line() + xlab("time") + ylab("excess bond return")
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+adf.auto(as.data.frame(ydata[,-5]), criteria = "AIC") %>% pander()
+# log()
+xdata[, tcode==4 | tcode==5 | tcode==6] = log(xdata[, tcode==4 | tcode==5 | tcode==6])
+# FD
+xtem = xdata[-1,]
+xtem[, tcode==6] = xdata[, tcode==6] %>% apply(2, diff)
+# name
+colnames(xtem)[tcode==2 | tcode==5 | tcode==6] = 
+  paste0(colnames(xtem)[tcode==2 | tcode==5 | tcode==6], ".level")
+
+x0 = lags(maxlag , xtem[, tcode==1 | tcode==4]) 
+x1 = lag1(maxlag, xtem[, tcode==2 | tcode==5 | tcode==6])
+x = cbind(x0, x1) %>% scale()
+y2 = lag0(maxlag = maxlag, ydata$yr2[-1]) %>% scale()
+p = dim(x)[2]
+n = dim(x)[1]
+lambda.fix = sqrt(log( p ) / n )
+lambda.seq = seq(0.5, 0, -0.0025)
+# fit model, collect data
+lasso2 = glmnet(x, y2, alpha=1, thresh=1E-5, lambda= lambda.seq, maxit = 10^9)
+trace2 = trace.plot.table(lasso2, lambda.seq, lambda.fix)
+fitted2 = predict(lasso2 , s=lambda.seq[which.min(abs(lambda.seq-lambda.fix))] , newx = x)
+mse2 = mean((y2-fitted2)^2)
+mse.out2 = out.mse(x, y2, lambda.seq, p)
+trace2$plot + labs(caption = "y = yr2")
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# y = yr3
+y3 = lag0(maxlag = maxlag, ydata$yr3[-1]) %>% scale()
+lasso3 = glmnet(x, y3, alpha=1, thresh=1E-5, lambda= lambda.seq, maxit = 10^9)
+trace3 = trace.plot.table(lasso3, lambda.seq, lambda.fix)
+fitted3 = predict(lasso3 , s=lambda.seq[which.min(abs(lambda.seq-lambda.fix))] , newx = x)
+mse3 = mean((y3-fitted3)^2)
+mse.out3 = out.mse(x, y3, lambda.seq, p)
+trace3$plot + labs(caption = "y = yr3")
+# y = yr4
+y4 = lag0(maxlag = maxlag, ydata$yr4[-1]) %>% scale()
+lasso4 = glmnet(x, y4, alpha=1, thresh=1E-5, lambda= lambda.seq, maxit = 10^9)
+trace4 = trace.plot.table(lasso4, lambda.seq, lambda.fix)
+fitted4 = predict(lasso4 , s=lambda.seq[which.min(abs(lambda.seq-lambda.fix))] , newx = x)
+mse4 = mean((y4-fitted4)^2)
+mse.out4 = out.mse(x, y4, lambda.seq, p)
+trace4$plot + labs(caption = "y = yr4")
+# y = yr5
+y5 = lag0(maxlag = maxlag, ydata$yr5[-1]) %>% scale()
+lasso5 = glmnet(x, y5, alpha=1, thresh=1E-5, lambda= lambda.seq, maxit = 10^9)
+trace5 = trace.plot.table(lasso5, lambda.seq, lambda.fix)
+fitted5 = predict(lasso5 , s=lambda.seq[which.min(abs(lambda.seq-lambda.fix))] , newx = x)
+mse5 = mean((y5-fitted5)^2)
+mse.out5 = out.mse(x, y5, lambda.seq, p)
+trace5$plot + labs(caption = "y = yr5")
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+variable = c(trace2$coef[,2] %>% as.character(), 
+             trace3$coef[,2] %>% as.character(), 
+             trace4$coef[,2] %>% as.character(), 
+             trace5$coef[,2] %>% as.character()) %>% unique() %>% 
+  as.data.frame(stringsAsFactors = FALSE)
+colnames(variable) = "variable"
+sum.table = left_join(variable, trace2$coef[,2:3]) %>%
+  left_join(., trace3$coef[,2:3], by = "variable") %>%
+  left_join(., trace4$coef[,2:3], by = "variable") %>%
+  left_join(., trace5$coef[,2:3], by = "variable") %>%
+  as.data.frame(stringsAsFactors = FALSE)
+sum.table[ , -1] = round(sum.table[ , -1] , digits = 6)
+colnames(sum.table) = c("Series" , "Yr2" , "Yr3" , "Yr4" , "Yr5" )
+pander::pander(sum.table, justify = "left" , split.table = Inf , 
+               split.cell = 80 , caption = "Estimated non-zero coefficients with fixed lambda")
+
+data.frame(`Short description` = c("hsmw",
+                                   "hsbsou",
+                                   "lhel",
+                                   "fygt1",
+                                   "exrjan",
+                                   "exrcan",
+                                   "lhu680",
+                                   "ces003") , 
+           `Long description` = c("Housing Starts:Midwest(Thous.U.)S.A." , 
+  "Houses Authorized By Build. Permits:South(Thou.U.)S.A.",
+  "Index Of Help-Wanted Advertising In Newspapers (1967=100;Sa)",
+  "Interest Rate: U.S.Treasury Const Maturities,1-Yr.(percentage Per Ann,Nsa)",
+  "Foreign Exchange Rate: Japan (Yen Per U.S.$)",
+  "Foreign Exchange Rate: Canada (Canadian $ Per U.S.$)",
+  "Unemploy.By Duration: Average(Mean)Duration In Weeks (Sa)",
+  "Employees On Nonfarm Payrolls - Goods-Producing"), stringsAsFactors = FALSE) %>% 
+  pander(justify = "left" , split.table = Inf , 
+               split.cell = 80, style = "grid", caption = "Data description")
+```
+
+```{r, echo=FALSE}
+inves.2 = x[, colnames(x) %in% (trace2$coef[,2] %>% as.character())]
+inves.3 = x[, colnames(x) %in% (trace3$coef[,2] %>% as.character())]
+inves.4 = x[, colnames(x) %in% (trace4$coef[,2] %>% as.character())]
+inves.5 = x[, colnames(x) %in% (trace5$coef[,2] %>% as.character())]
+rbind(adf.auto(inves.2, criteria = "BIC") , 
+      adf.auto(inves.3, criteria = "BIC") , adf.auto(inves.4, criteria = "BIC") , adf.auto(inves.5, criteria = "BIC")) %>% unique() %>% pander()
+
+
+t.aic = data.frame(integration = character(length = 146), stringsAsFactors = FALSE)
+t.bic = data.frame(integration = character(length = 146), stringsAsFactors = FALSE)
+t.sw = data.frame(integration = character(length = 146), stringsAsFactors = FALSE)
+adf.aic = adf.auto(full.raw, criteria = "AIC")
+adf.bic = adf.auto(full.raw, criteria = "BIC")
+t.aic[adf.aic$Conclusion=="I(0)",] = "0"
+t.bic[adf.bic$Conclusion=="I(0)",] = "0"
+diff.full.raw = apply(full.raw , 2, diff)
+adf.aic.diff = adf.auto(diff.full.raw, criteria = "AIC")
+adf.aic = cbind(adf.aic, adf.aic.diff)
+adf.bic.diff = adf.auto(diff.full.raw, criteria = "BIC")
+adf.bic = cbind(adf.bic, adf.bic.diff)
+#write.csv(adf.aic, "/Users/stanza/documents/github/lasso/adf_aic.csv")
+#write.csv(adf.bic, "/Users/stanza/documents/github/lasso/adf_bic.csv")
+t.aic[adf.aic[,6]=="I(1)",] = "2"
+t.bic[adf.bic[,6]=="I(1)",] = "2"
+t.aic[t.aic=="",] = "1"
+t.bic[t.bic=="",] = "1"
+t.sw[full.tcode==1,] = "0"
+t.sw[full.tcode==2 | full.tcode==5,] = "1"
+t.sw[full.tcode==6,] = "2"
+full.t.aic = t.aic
+full.t.bic = t.bic
+full.t.sw = t.sw
+t.aic = t.aic[-idx2,]
+t.bic = t.bic[-idx2,]
+t.sw = t.sw[-idx2,]
+```
+
+
+
+
+
+
+
+
+

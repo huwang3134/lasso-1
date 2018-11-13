@@ -1,0 +1,149 @@
+ADF  (AIC),,,,,,
+,Original data,,,First-differenced data,,
+Series,Conclusion,Type,Lags,Conclusion,Type,Lags
+GDP,I(1),trend,2,I(0),trend,1
+Consumption,I(1),trend,3,I(0),trend,3
+Cons:Dur,I(1),trend,3,I(0),trend,2
+Cons:Svc,I(1),trend,6,I(0),trend,5
+Cons:NonDur,I(1),trend,3,I(0),trend,7
+Investment,I(1),trend,2,I(0),drift,1
+FixedInv,I(1),trend,2,I(0),drift,1
+Inv:Equip,I(1),trend,1,I(0),trend,3
+FixInv:NonRes,I(1),trend,1,I(0),trend,9
+FixedInv:Res,I(1),trend,12,I(0),drift,11
+Ch. Inv/GDP,I(0),trend,3,I(0),drift,7
+Gov.Spending,I(1),trend,5,I(0),drift,3
+Gov:Fed,I(1),trend,5,I(0),drift,4
+Gov:State&Local,I(1),trend,5,I(0),trend,4
+Exports,I(1),trend,3,I(0),trend,2
+Imports,I(1),trend,1,I(0),trend,2
+Disp-Income,I(1),trend,1,I(0),trend,2
+Ouput:NFB,I(1),trend,2,I(0),trend,1
+Output:Bus,I(1),trend,2,I(0),trend,1
+IP: Total index,I(1),trend,4,I(0),drift,3
+IP: Final products,I(1),trend,1,I(0),drift,11
+IP: Consumer goods,I(1),trend,3,I(0),drift,2
+IP: Materials,I(1),trend,4,I(0),drift,3
+IP: Dur gds materials,I(1),trend,4,I(0),trend,3
+IP: Nondur gds materials,I(1),trend,4,I(0),trend,3
+IP: Dur Cons. Goods,I(1),trend,13,I(0),drift,11
+IP: Auto ,I(1),trend,1,I(0),drift,1
+IP:NonDur Cons God,I(1),trend,3,I(0),trend,2
+IP: Bus Equip,I(1),trend,7,I(0),drift,15
+Emp:Nonfarm,I(1),trend,9,I(0),drift,10
+Emp: Private,I(1),trend,9,I(0),drift,11
+Emp: mfg,I(1),trend,2,I(0),trend,1
+Emp:Services,I(1),trend,8,I(0),drift,7
+Emp:Goods,I(1),drift,2,I(0),trend,11
+Emp: DurGoods,I(1),trend,1,I(0),trend,3
+Emp: Nondur Goods,I(1),trend,2,I(0),trend,1
+Emp: Const,I(1),trend,11,I(0),drift,10
+Emp: Edu&Health,I(1),trend,5,I(0),trend,4
+Emp: Finance,I(1),trend,14,I(0),trend,13
+Emp: Infor,I(1),trend,3,I(0),trend,2
+Emp: Bus Serv,I(1),trend,2,I(0),trend,3
+Emp:Leisure,I(1),trend,8,I(0),trend,7
+Emp:OtherSvcs,I(1),trend,5,I(1),trend,4
+Emp: Mining/NatRes,I(1),drift,13,I(1),drift,12
+Emp:Trade&Trans,I(1),trend,12,I(0),trend,11
+Emp: Gov,I(1),trend,4,I(0),trend,3
+Emp:Retail,I(1),trend,5,I(0),trend,7
+Emp:Wholesal,I(1),trend,14,I(0),trend,13
+Emp: Gov(Fed),I(1),trend,2,I(0),drift,1
+Emp: Gov (State),I(1),trend,2,I(0),trend,1
+Emp: Gov (Local),I(1),trend,2,I(0),trend,1
+Emp: Total (HHSurve),I(1),trend,4,I(0),drift,3
+LF Part Rate,I(1),trend,9,I(0),trend,8
+Unemp Rate,I(1),trend,9,I(0),drift,11
+Urate_ST,I(1),drift,13,I(0),drift,11
+Urate_LT,I(0),trend,5,I(0),drift,4
+Urate: Age16-19,I(0),trend,5,I(0),drift,7
+Urate:Age>20 Men,I(0),trend,9,I(0),drift,11
+Urate: Age>20 Women,I(1),drift,12,I(0),drift,11
+U: Dur<5wks,I(1),trend,4,I(0),drift,3
+U:Dur5-14wks,I(1),trend,1,I(0),drift,11
+U:dur>15-26wks,I(1),trend,13,I(0),drift,12
+U: Dur>27wks,I(0),trend,5,I(0),drift,4
+Emp:SlackWk,I(1),trend,3,I(0),drift,1
+EmpHrs:Bus Sec,I(1),trend,2,I(0),drift,11
+EmpHrs:nfb,I(1),trend,9,I(0),drift,11
+AWH Man,I(0),trend,1,I(0),drift,7
+AWH Overtime,I(1),trend,2,I(0),drift,1
+Orders (DurMfg),I(0),trend,2,I(0),drift,3
+Orders(ConsumerGoods/Mat.),I(1),trend,9,I(0),drift,8
+UnfOrders(DurGds),I(1),trend,1,I(0),trend,3
+Orders(NonDefCap),I(0),trend,4,I(0),drift,3
+VendPerf,I(0),drift,12,I(0),drift,15
+NAPM:INV,I(0),trend,8,I(0),drift,15
+NAPM:ORD,I(0),drift,11,I(0),drift,15
+PCED,I(1),trend,6,I(1),trend,5
+PCED_LFE,I(1),trend,6,I(1),trend,2
+GDP Defl,I(1),trend,3,I(1),trend,2
+GPDI Defl,I(1),trend,4,I(0),drift,3
+BusSec Defl,I(1),trend,3,I(1),trend,6
+PCED_Goods,I(1),trend,6,I(0),drift,5
+PCED_DurGoods,I(1),trend,13,I(1),trend,12
+PCED_NDurGoods,I(1),trend,6,I(0),drift,2
+PCED_Serv,I(1),trend,5,I(1),trend,4
+PCED_HouseholdServices,I(1),trend,5,I(1),trend,4
+PCED_MotorVec,I(1),trend,3,I(0),drift,2
+PCED_DurHousehold,I(1),trend,2,I(0),trend,1
+PCED_Recreation,I(1),trend,3,I(1),trend,2
+PCED_OthDurGds,I(1),trend,7,I(0),drift,6
+PCED_Food_Bev,I(1),trend,13,I(1),trend,12
+PCED_Clothing,I(1),trend,6,I(1),trend,5
+PCED_Gas_Enrgy,I(1),trend,2,I(0),drift,3
+PCED_OthNDurGds,I(1),trend,3,I(0),trend,2
+PCED_Housing-Utilities,I(1),trend,6,I(1),trend,5
+PCED_HealthCare,I(1),trend,4,I(1),trend,3
+PCED_TransSvg,I(1),trend,10,I(1),trend,9
+PCED_RecServices,I(0),trend,8,I(1),trend,7
+PCED_FoodServ_Acc.,I(1),trend,11,I(1),trend,10
+PCED_FIRE,I(1),trend,2,I(0),drift,1
+PCED_OtherServices,I(1),trend,8,I(1),trend,7
+CPI,I(0),trend,5,I(0),trend,4
+CPI_LFE,I(1),trend,5,I(1),trend,4
+PPI:FinGds,I(1),trend,5,I(0),trend,4
+PPI:FinConsGds,I(1),trend,5,I(0),trend,4
+PPI:FinConsGds(Food),I(1),trend,14,I(0),trend,10
+PPI:IndCom,I(1),trend,2,I(0),drift,1
+PPI:IntMat,I(1),trend,2,I(0),drift,1
+NAPM com price,I(0),trend,3,I(0),drift,7
+Real_AHE:Const,I(1),trend,9,I(1),trend,8
+Real_AHE:MFG,I(1),trend,15,I(1),trend,9
+CPH:NFB,I(1),trend,14,I(0),drift,13
+CPH:Bus,I(1),trend,14,I(0),drift,13
+OPH:nfb,I(1),trend,1,I(0),trend,1
+OPH:Bus,I(1),trend,1,I(0),trend,1
+ULC:Bus,I(1),trend,7,I(0),drift,6
+ULC:NFB,I(1),trend,7,I(0),drift,6
+UNLPay:nfb,I(1),trend,7,I(0),drift,6
+FedFunds,I(1),trend,7,I(0),drift,6
+TB-3Mth,I(1),trend,7,I(0),drift,12
+TM-6MTH,I(1),trend,7,I(0),drift,6
+TB-1YR,I(1),trend,7,I(0),drift,6
+TB-10YR,I(1),trend,7,I(0),drift,6
+Com Paper,I(1),trend,7,I(0),drift,6
+AAA Bond,I(1),drift,3,I(0),trend,4
+BAA Bond,I(1),drift,1,I(0),trend,1
+BAA_GS10,I(0),trend,1,I(0),drift,4
+tb6m_tb3m,I(0),trend,4,I(0),drift,5
+GS1_tb3m,I(1),trend,6,I(0),drift,5
+GS10_tb3m,I(0),trend,12,I(0),drift,10
+CP_Tbill Spread,I(0),trend,4,I(0),drift,6
+Real_mbase,I(1),trend,14,I(1),trend,15
+Real_m1,I(1),trend,12,I(1),trend,11
+Real_m2,I(1),trend,3,I(0),trend,2
+Real_mzm,I(1),trend,11,I(0),trend,11
+Real_C&Lloand,I(0),trend,1,I(0),drift,14
+Real_ConsLoans,I(1),trend,1,I(0),drift,2
+Real_NonRevCredit,I(1),trend,1,I(0),trend,1
+Real_LoansRealEst,I(1),trend,12,I(1),trend,13
+Real_ConsuCred,I(1),trend,7,I(0),trend,6
+S&P 500,I(1),trend,14,I(0),trend,15
+DJIA,I(1),trend,2,I(0),trend,1
+Ex rate: major,I(1),trend,3,I(0),drift,2
+Cons. Expectations,I(1),trend,1,I(0),drift,1
+IP: Energy Prds,I(1),trend,11,I(0),drift,10
+Petroleum Stocks,I(1),trend,9,I(0),drift,8
+Real_Price:Oil,I(1),trend,5,I(0),drift,4
