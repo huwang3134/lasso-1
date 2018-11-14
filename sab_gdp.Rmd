@@ -149,9 +149,10 @@ lasso1.bic = lasso111gdp(data = bpraw, tcode = t.bic)
 trace1.bic = trace.plot.table(lasso1.bic$lasso, lambda.seq, lasso1.bic$lambda)
 
 sum1 = sumtable(trace1.sw, trace1.aic, trace1.bic)
-sum1 = cbind(I1 = c("", "", "AIC, BIC", "SW, AIC", "", "SW, AIC"), sum1)
-colnames(sum1) = c("I(1)", "S & W", "AIC", "BIC")
-pander(sum1, caption = "Lasso 1, non-zero coefficients")
+#sum1 = cbind(I1 = c("", "", "AIC, BIC", "SW, AIC", "", "SW, AIC"), sum1)
+#colnames(sum1) = c("I(1)", "S & W", "AIC", "BIC")
+#pander(sum1, caption = "Lasso 1, non-zero coefficients")
+write.csv(sum1, file="/Users/stanza/documents/github/lasso/gdp1.csv")
 ```
 
 ## Lasso 2  
@@ -182,8 +183,9 @@ lasso2.bic = lasso222gdp(data = bpraw, tcode = t.bic)
 trace2.bic = trace.plot.table(lasso2.bic$lasso, lambda.seq, lasso2.bic$lambda)
 
 sum2 = sumtable(trace2.sw, trace2.aic, trace2.bic)
-colnames(sum2) = c("I(1)", "S & W", "AIC", "BIC")
-pander(sum2, caption = "Lasso 2, non-zero coefficients")
+#colnames(sum2) = c("I(1)", "S & W", "AIC", "BIC")
+#pander(sum2, caption = "Lasso 2, non-zero coefficients")
+write.csv(sum2, file="/Users/stanza/documents/github/lasso/gdp2.csv")
 ```
 
 ## Lasso 3
@@ -214,9 +216,10 @@ lasso3.bic = lasso333gdp(data = bpraw, tcode = t.bic)
 trace3.bic = trace.plot.table(lasso3.bic$lasso, lambda.seq, lasso3.bic$lambda)
 
 sum3 = sumtable(trace3.sw, trace3.aic, trace3.bic)
-sum3 = cbind(I1 = c("",  "AIC, BIC", "", "", "", "", ""), sum3)
-colnames(sum3) = c("I(1)", "S & W", "AIC", "BIC")
-pander(sum3, caption = "Lasso 3, non-zero coefficients")
+#sum3 = cbind(I1 = c("",  "AIC, BIC", "", "", "", "", ""), sum3)
+#colnames(sum3) = c("I(1)", "S & W", "AIC", "BIC")
+#pander(sum3, caption = "Lasso 3, non-zero coefficients")
+write.csv(sum3, file="/Users/stanza/documents/github/lasso/gdp3.csv")
 ```
 
 

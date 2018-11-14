@@ -1,0 +1,9 @@
+"","variable","value.x","value.y","value"
+"1","NAPM:ORD.lag1",0.032948,0.037416,0.037416
+"2","Cons. Expectations.lag1",0.036495,NA,NA
+"3","D.Cons:Svc.lag1",0.19247,0.206991,0.206991
+"4","D.FixedInv:Res.lag1",0.195004,0.194936,0.194936
+"5","D.IP: Nondur gds materials.lag1",0.073594,0.076466,0.076466
+"6","D.Emp:SlackWk.lag1",-0.021582,-0.026198,-0.026198
+"7","D.S&P 500.lag1",0.030206,0.030888,0.030888
+"8","D.PCED_OtherServices.lag3",NA,NA,-0.001005
