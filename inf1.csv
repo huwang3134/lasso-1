@@ -1,0 +1,20 @@
+"","","S & W","AIC","BIC"
+"1","D.PCED.lag1",0.295711,0.304998,0.314939
+"2","D.PCED_FoodServ_Acc..lag1",0.136461,0.132647,NA
+"3","D.CPI_LFE.lag1",0.068751,0.060429,0.111259
+"4","D.PPI:FinGds.lag1",0.021902,NA,NA
+"5","FedFunds.lag1",0.008098,0.007461,0.000424
+"6","D.GPDI Defl.lag2",0.040085,0.043869,NA
+"7","D.PCED_FoodServ_Acc..lag2",0.066757,0.065455,NA
+"8","D.PCED_Food_Bev.lag3",0.009076,0.011376,NA
+"9","D.PCED_FoodServ_Acc..lag3",0.025484,0.024028,NA
+"10","D.PCED_FoodServ_Acc..lag4",0.000331,0.001148,NA
+"11","Inflation.lag1",0.019598,0.037273,0.029732
+"12","Emp: DurGoods.lag1",NA,NA,0.007074
+"13","D.BusSec Defl.lag1",NA,NA,0.07115
+"14","NAPM com price.lag1",NA,NA,0.011129
+"15","D.GDP Defl.lag2",NA,NA,0.041426
+"16","D.BusSec Defl.lag2",NA,NA,0.032044
+"17","D.GDP Defl.lag3",NA,NA,0.036341
+"18","D.BusSec Defl.lag3",NA,NA,0.001341
+"19","Inflation.lag3",NA,NA,0.014603

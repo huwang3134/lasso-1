@@ -1,5 +1,5 @@
 ---
-title: "SW and ADF test (GDP)"
+title: "SW and ADF test (Inflation)"
 author: "Shuofan Zhang"
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output: pdf_document
@@ -111,6 +111,8 @@ full.t.sw = t.sw
 t.aic = t.aic[-idx2,]
 t.bic = t.bic[-idx2,]
 t.sw = t.sw[-idx2,]
+t.inf = t.sw
+t.inf[short=="CPI"] = "1"
 compare = cbind(full.short, full.t.sw, full.t.aic, full.t.bic)
 ```
 
@@ -118,7 +120,7 @@ compare = cbind(full.short, full.t.sw, full.t.aic, full.t.bic)
 # Data prepare
 maxlag = 4
 lambda.seq <- seq(0.5, 0, -0.0025)
-#save.image(file = "sab_gdp.RData")
+#save.image(file = "sab_Inflation.RData")
 ```
 
 
@@ -139,19 +141,19 @@ $$
 
 ```{r include=T, message=F, warning=F, echo=F}
 # SW
-lasso1.sw = lasso111gdp(data = bpraw, tcode = t.sw)
+lasso1.sw = lasso111inf(data = bpraw, tcode = t.inf)
 trace1.sw = trace.plot.table(lasso1.sw$lasso, lambda.seq, lasso1.sw$lambda)
 # AIC
-lasso1.aic = lasso111gdp(data = bpraw, tcode = t.aic)
+lasso1.aic = lasso111inf(data = bpraw, tcode = t.aic)
 trace1.aic = trace.plot.table(lasso1.aic$lasso, lambda.seq, lasso1.aic$lambda)
 # BIC
-lasso1.bic = lasso111gdp(data = bpraw, tcode = t.bic)
+lasso1.bic = lasso111inf(data = bpraw, tcode = t.bic)
 trace1.bic = trace.plot.table(lasso1.bic$lasso, lambda.seq, lasso1.bic$lambda)
 
 sum1 = sumtable(trace1.sw, trace1.aic, trace1.bic)
-sum1 = cbind(I1 = c("", "", "AIC, BIC", "SW, AIC", "", "SW, AIC"), sum1)
-colnames(sum1) = c("I(1)", "S & W", "AIC", "BIC")
-pander(sum1, caption = "Lasso 1, non-zero coefficients")
+colnames(sum1) = c("", "S & W", "AIC", "BIC")
+#pander(sum1, caption = "Lasso 1, non-zero coefficients")
+write.csv(sum1, "/Users/stanza/documents/github/lasso/inf1.csv")
 ```
 
 ## Lasso 2  
@@ -172,18 +174,19 @@ $$
 
 ```{r include=T, message=F, warning=F, echo=F}
 # SW
-lasso2.sw = lasso222gdp(data = bpraw, tcode = t.sw)
+lasso2.sw = lasso222inf(data = bpraw, tcode = t.inf)
 trace2.sw = trace.plot.table(lasso2.sw$lasso, lambda.seq, lasso2.sw$lambda)
 # AIC
-lasso2.aic = lasso222gdp(data = bpraw, tcode = t.aic)
+lasso2.aic = lasso222inf(data = bpraw, tcode = t.aic)
 trace2.aic = trace.plot.table(lasso2.aic$lasso, lambda.seq, lasso2.aic$lambda)
 # BIC
-lasso2.bic = lasso222gdp(data = bpraw, tcode = t.bic)
+lasso2.bic = lasso222inf(data = bpraw, tcode = t.bic)
 trace2.bic = trace.plot.table(lasso2.bic$lasso, lambda.seq, lasso2.bic$lambda)
 
 sum2 = sumtable(trace2.sw, trace2.aic, trace2.bic)
-colnames(sum2) = c("I(1)", "S & W", "AIC", "BIC")
-pander(sum2, caption = "Lasso 2, non-zero coefficients")
+colnames(sum2) = c("", "S & W", "AIC", "BIC")
+#pander(sum2, caption = "Lasso 2, non-zero coefficients")
+write.csv(sum2, "/Users/stanza/documents/github/lasso/inf2.csv")
 ```
 
 ## Lasso 3
@@ -204,19 +207,19 @@ $$
 
 ```{r include=T, message=F, warning=F, echo=F}
 # SW
-lasso3.sw = lasso333gdp(data = bpraw, tcode = t.sw)
+lasso3.sw = lasso333inf(data = bpraw, tcode = t.inf)
 trace3.sw = trace.plot.table(lasso3.sw$lasso, lambda.seq, lasso3.sw$lambda)
 # AIC
-lasso3.aic = lasso333gdp(data = bpraw, tcode = t.aic)
+lasso3.aic = lasso333inf(data = bpraw, tcode = t.aic)
 trace3.aic = trace.plot.table(lasso3.aic$lasso, lambda.seq, lasso3.aic$lambda)
 # BIC
-lasso3.bic = lasso333gdp(data = bpraw, tcode = t.bic)
+lasso3.bic = lasso333inf(data = bpraw, tcode = t.bic)
 trace3.bic = trace.plot.table(lasso3.bic$lasso, lambda.seq, lasso3.bic$lambda)
 
 sum3 = sumtable(trace3.sw, trace3.aic, trace3.bic)
-sum3 = cbind(I1 = c("",  "AIC, BIC", "", "", "", "", ""), sum3)
-colnames(sum3) = c("I(1)", "S & W", "AIC", "BIC")
-pander(sum3, caption = "Lasso 3, non-zero coefficients")
+colnames(sum3) = c("", "S & W", "AIC", "BIC")
+#pander(sum3, caption = "Lasso 3, non-zero coefficients")
+write.csv(sum3, "/Users/stanza/documents/github/lasso/inf3.csv")
 ```
 
 

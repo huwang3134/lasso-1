@@ -6,13 +6,13 @@ output: pdf_document
 ---
 
 ```{r, echo=F, message=F, eval=T}
-#com.table = readRDS(file =  "/Users/stanza/documents/github/lasso/compare.rds")
-#pander::pander(com.table, justify = "left" , split.table = Inf , 
-#               split.cell = 80 , caption = "Compare SW with ADF test")
+com.table = readRDS(file =  "/Users/stanza/documents/github/lasso/compare.rds")
+pander::pander(com.table, justify = "left" , split.table = Inf , 
+               split.cell = 80 , caption = "Compare SW with ADF test")
 
-com.ng = readRDS(file =  "/Users/stanza/documents/github/lasso/ng/compare.rds")
-pander::pander(com.ng, justify = "left" , split.table = Inf , 
-               split.cell = 80 , caption = "Compare NG with ADF test")
+#com.ng = readRDS(file =  "/Users/stanza/documents/github/lasso/ng/compare.rds")
+#pander::pander(com.ng, justify = "left" , split.table = Inf , 
+#               split.cell = 80 , caption = "Compare NG with ADF test")
 
 #write.csv(com.table, "/Users/stanza/documents/github/lasso/compare.csv")
 ```

@@ -145,24 +145,24 @@ adf.auto <- function(data, criteria) {
 }
 
 
-lasso111 <- function(data, tcode){
+lasso111gdp <- function(data, tcode){
   data.sw = data
   t.sw = tcode
-  gdp <- data[,1]
-  D.gdp <- diff(gdp) %>% as.numeric() # (2-224=223)
-  y <- lag0(maxlag , D.gdp) %>% scale()# dependent variable (3-224=222), done
-  D.gdp.lags <- lags(maxlag, D.gdp)
-  gdp.lag1 <- lag1(maxlag, gdp[-1])
+  GDP <- data[ , colnames(data)=="GDP"]
+  D.GDP <- diff(GDP) %>% as.numeric() # (2-224=223)
+  y <- lag0(maxlag , D.GDP) %>% scale()# dependent variable (3-224=222), done
+  D.GDP.lags <- lags(maxlag, D.GDP)
+  GDP.lag1 <- lag1(maxlag, GDP[-1])
   # create x 
-  x.sw = data.sw[,-1]
-  x.t.sw = t.sw[-1]
+  x.sw = data.sw[ , colnames(data)!="GDP"]
+  x.t.sw = t.sw[colnames(data)!="GDP"]
   xtem.sw = x.sw[-1,]
   xtem.sw[ , x.t.sw=="2"] <- apply( x.sw[ , x.t.sw=="2"], 2, diff )
   colnames(xtem.sw)[x.t.sw=="2"] = 
     paste0("D.", colnames(xtem.sw)[x.t.sw=="2"])
   xtem.sw = lags(maxlag , xtem.sw)  # explanatory variables (2-223=222), done
  
-  x.sw = cbind(xtem.sw, D.gdp.lags, gdp.lag1) %>% scale()
+  x.sw = cbind(xtem.sw, D.GDP.lags, GDP.lag1) %>% scale()
   p.sw = dim(x.sw)[2]
   n.sw = dim(x.sw)[1]
   lambda.fix.sw = sqrt(log( p.sw ) / n.sw )
@@ -176,7 +176,7 @@ lasso111 <- function(data, tcode){
   return(list)
 }
 
-lasso222 <- function(data, tcode){
+lasso222gdp <- function(data, tcode){
   # create data
   i0 = data[-(1:2) , tcode=="0"]
   di1 = apply(data[,tcode=="1"], 2, diff)
@@ -187,14 +187,14 @@ lasso222 <- function(data, tcode){
   colnames(d2i2) = paste0("D2.", colnames(d2i2))
   x = cbind(i0, di1, d2i2)
   x = lags(maxlag , x) # x lost 2 obs
-  gdp = bpraw[, 1]
-  D.gdp = diff(gdp)
-  D.gdp = D.gdp[-1]
-  gdp = gdp[-(1:2)]
-  y.lag1 = lag1(maxlag , gdp)
-  y.5 = lag0(maxlag, D.gdp) %>% scale()
+  GDP = bpraw[, colnames(bpraw)=="GDP"]
+  D.GDP = diff(GDP)
+  D.GDP = D.GDP[-1]
+  GDP = GDP[-(1:2)]
+  GDP.lag1 = lag1(maxlag , GDP)
+  y.5 = lag0(maxlag, D.GDP) %>% scale()
  
-  x.5 = cbind( y.lag1 , x) %>% scale()
+  x.5 = cbind( GDP.lag1 , x) %>% scale()
   p.5 = dim(x.5)[2]
   n.5 = dim(x.5)[1]
   lambda.fix = sqrt(log( p.5 ) / n.5 )
@@ -207,11 +207,11 @@ lasso222 <- function(data, tcode){
   return(list)
 }
 
-lasso333 <- function(data, tcode){
+lasso333gdp <- function(data, tcode){
   # create data
-  gdp = bpraw[, 1]
-  D.gdp = diff(gdp)[-1]
-  y = lag0(maxlag, D.gdp) %>% scale()
+  GDP = bpraw[, colnames(bpraw)=="GDP"]
+  D.GDP = diff(GDP)[-1]
+  y = lag0(maxlag, D.GDP) %>% scale()
   i0 = data[ , tcode=="0"] # *
   i1 = data[,tcode=="1"] # *
   i2 = data[,tcode=="2"]
@@ -387,4 +387,100 @@ adf.drift <- function(data, criteria) {
   return(tb)
 }
 
+
+lasso111inf <- function(data, tcode){
+  data.sw = data
+  t.sw = tcode
+  CPI <- data[ , colnames(data)=="CPI"]
+  Inflation <- diff(CPI) %>% as.numeric() # (2-224=223)
+  y <- lag0(maxlag , Inflation) %>% scale()# dependent variable (3-224=222), done
+  Inflation.lags <- lags(maxlag, Inflation)
+  CPI.lag1 <- lag1(maxlag, CPI[-1])
+  # create x 
+  x.sw = data.sw[ , colnames(data)!="CPI"]
+  x.t.sw = t.sw[colnames(data)!="CPI"]
+  xtem.sw = x.sw[-1,]
+  xtem.sw[ , x.t.sw=="2"] <- apply( x.sw[ , x.t.sw=="2"], 2, diff )
+  colnames(xtem.sw)[x.t.sw=="2"] = 
+    paste0("D.", colnames(xtem.sw)[x.t.sw=="2"])
+  xtem.sw = lags(maxlag , xtem.sw)  # explanatory variables (2-223=222), done
+  
+  x.sw = cbind(xtem.sw, Inflation.lags, CPI.lag1) %>% scale()
+  p.sw = dim(x.sw)[2]
+  n.sw = dim(x.sw)[1]
+  lambda.fix.sw = sqrt(log( p.sw ) / n.sw )
+  # fit model, collect data
+  lasso.sw = glmnet(x.sw, y, alpha=1, thresh=1E-5, lambda= lambda.seq, maxit = 10^9)
+  fitted.sw = predict(lasso.sw , s=lambda.seq[which.min(abs(lambda.seq-lambda.fix.sw))] , 
+                      newx = x.sw)
+  mse.sw = mean((y-fitted.sw)^2)
+  mse.out.sw = out.mse(x.sw, y, lambda.seq, p.sw)
+  list = list(lasso = lasso.sw, mse = mse.sw, mse.out = mse.out.sw, lambda = lambda.fix.sw)
+  return(list)
+}
+
+lasso222inf <- function(data, tcode){
+  # create data
+  i0 = data[-(1:2) , tcode=="0"]
+  di1 = apply(data[,tcode=="1"], 2, diff)
+  di1 = di1[-1,]
+  colnames(di1) = paste0("D.", colnames(di1))
+  colnames(di1)[colnames(di1)=="D.CPI"] = "Inflation"
+  di2 = apply(data[,tcode=="2"], 2, diff)
+  d2i2 = apply(di2, 2, diff)
+  colnames(d2i2) = paste0("D2.", colnames(d2i2))
+  x = cbind(i0, di1, d2i2)
+  x = lags(maxlag , x) # x lost 2 obs
+  CPI = bpraw[, colnames(bpraw)=="CPI"]
+  Inflation = diff(CPI)
+  Inflation = Inflation[-1]
+  CPI = CPI[-(1:2)]
+  CPI.lag1 = lag1(maxlag , CPI)
+  y.5 = lag0(maxlag, Inflation) %>% scale()
+  
+  x.5 = cbind( CPI.lag1 , x) %>% scale()
+  p.5 = dim(x.5)[2]
+  n.5 = dim(x.5)[1]
+  lambda.fix = sqrt(log( p.5 ) / n.5 )
+  # fit model, collect data
+  lasso.5 = glmnet(x.5, y.5, alpha=1, thresh=1E-5, lambda= lambda.seq, maxit = 10^9)
+  fitted.5 = predict(lasso.5 , s=lambda.seq[which.min(abs(lambda.seq-lambda.fix))] , newx = x.5)
+  mse.5 = mean((y.5-fitted.5)^2)
+  mse.out5 = out.mse(x.5, y.5, lambda.seq, p.5)
+  list = list(lasso = lasso.5, mse = mse.5, mse.out = mse.out5, lambda = lambda.fix)
+  return(list)
+}
+
+lasso333inf <- function(data, tcode){
+  # create data
+  CPI = bpraw[, colnames(bpraw)=="CPI"]
+  Inflation = diff(CPI)[-1]
+  y = lag0(maxlag, Inflation) %>% scale()
+  i0 = data[ , tcode=="0"] # *
+  i1 = data[,tcode=="1"] # *
+  i2 = data[,tcode=="2"]
+  di1 = apply(i1, 2, diff) # *
+  di2 = apply(i2, 2, diff) # *
+  d2i2 = apply(di2, 2, diff) # *
+  colnames(di1) = paste0("D.", colnames(di1))
+  colnames(di1)[colnames(di1)=="D.CPI"] = "Inflation"
+  colnames(di2) = paste0("D.", colnames(di2))
+  colnames(d2i2) = paste0("D2.", colnames(d2i2))
+  xtem = cbind(i0[-(1:2),] , di1[-1,] , d2i2)
+  xtem = lags(maxlag, xtem)
+  xtem2 = cbind( i1[-(1:2),] , di2[-1,])
+  xtem2 = lag1(maxlag, xtem2)
+  
+  x = cbind( xtem, xtem2) %>% scale()
+  p = dim(x)[2]
+  n = dim(x)[1]
+  lambda.fix = sqrt(log( p ) / n )
+  # fit model, collect data
+  lasso.5 = glmnet(x, y, alpha=1, thresh=1E-5, lambda= lambda.seq, maxit = 10^9)
+  fitted.5 = predict(lasso.5 , s=lambda.seq[which.min(abs(lambda.seq-lambda.fix))] , newx = x)
+  mse.5 = mean((y-fitted.5)^2)
+  mse.out5 = out.mse(x, y, lambda.seq, p)
+  list = list(lasso = lasso.5, mse = mse.5, mse.out = mse.out5, lambda = lambda.fix)
+  return(list)
+}
 
