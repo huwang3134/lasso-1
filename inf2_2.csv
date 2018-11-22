@@ -1,0 +1,14 @@
+"","variable","value.x","value.y","value"
+"1","out-of sample MSE","2.215826","2.057929","2.068748"
+"2","D.U: Dur<5wks.lag1","-0.018359","-0.020871","-0.025507"
+"3","D.Orders (DurMfg).lag1","0.003257",NA,NA
+"4","D.Orders(ConsumerGoods/Mat.).lag1","0.098292","0.088779","0.089684"
+"5","D.CPH:NFB.lag1","0.035692","0.009798","0.007068"
+"6","D.TB-3Mth.lag1","0.007287","0.023543","0.036124"
+"7","D2.PCED_Gas_Enrgy.lag1","-0.037024",NA,NA
+"8","D2.PCED_RecServices.lag1","-0.076533","-0.070677",NA
+"9","D.Inflation.lag1","-0.001605",NA,"-0.02128"
+"10","D.Inflation.lag3","0.019867","0.0293","0.032332"
+"11","D.Orders (DurMfg).lag4","0.018299",NA,NA
+"12","D2.PPI:FinConsGds(Food).lag4","0.002038","0.001784",NA
+"13","D.PCED_Gas_Enrgy.lag1",NA,"-0.09536","-0.102391"

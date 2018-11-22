@@ -1,20 +1,19 @@
-"","","S & W","AIC","BIC"
-"1","D.PCED.lag1",0.295711,0.304998,0.314939
-"2","D.PCED_FoodServ_Acc..lag1",0.136461,0.132647,NA
-"3","D.CPI_LFE.lag1",0.068751,0.060429,0.111259
-"4","D.PPI:FinGds.lag1",0.021902,NA,NA
-"5","FedFunds.lag1",0.008098,0.007461,0.000424
-"6","D.GPDI Defl.lag2",0.040085,0.043869,NA
-"7","D.PCED_FoodServ_Acc..lag2",0.066757,0.065455,NA
-"8","D.PCED_Food_Bev.lag3",0.009076,0.011376,NA
-"9","D.PCED_FoodServ_Acc..lag3",0.025484,0.024028,NA
-"10","D.PCED_FoodServ_Acc..lag4",0.000331,0.001148,NA
-"11","Inflation.lag1",0.019598,0.037273,0.029732
-"12","Emp: DurGoods.lag1",NA,NA,0.007074
-"13","D.BusSec Defl.lag1",NA,NA,0.07115
-"14","NAPM com price.lag1",NA,NA,0.011129
-"15","D.GDP Defl.lag2",NA,NA,0.041426
-"16","D.BusSec Defl.lag2",NA,NA,0.032044
-"17","D.GDP Defl.lag3",NA,NA,0.036341
-"18","D.BusSec Defl.lag3",NA,NA,0.001341
-"19","Inflation.lag3",NA,NA,0.014603
+"","variable","value.x","value.y","value"
+"1","out-of sample MSE","0.764874","0.718888","0.732005"
+"2","Emp: mfg.lag1","0.020903",NA,NA
+"3","Emp: DurGoods.lag1","0.062215","0.110647","0.181476"
+"4","D.PCED.lag1","0.048958","0.334267","0.333037"
+"5","D.BusSec Defl.lag1","0.012521","0.008826","0.080172"
+"6","D.PCED_FoodServ_Acc..lag1","0.193987","0.174955",NA
+"7","D.CPI.lag1","0.161059",NA,NA
+"8","D.PPI:FinGds.lag1","0.122959",NA,NA
+"9","D.PPI:IntMat.lag1","0.030214",NA,NA
+"10","D.PCED_FoodServ_Acc..lag3","0.006393",NA,NA
+"11","D.CPI.lag3","0.12543",NA,NA
+"12","D.PPI:FinConsGds(Food).lag4","0.006264","0.028873",NA
+"13","D.CPI_LFE.lag1",NA,"0.000177",NA
+"14","NAPM com price.lag1",NA,"0.009892","0.039574"
+"15","D.PCED.lag2",NA,"0.041121","0.090784"
+"16","D.GPDI Defl.lag2",NA,"0.022028",NA
+"17","D.PCED.lag3",NA,"0.015523","0.062173"
+"18","D.PCED_Food_Bev.lag3",NA,"0.020161",NA

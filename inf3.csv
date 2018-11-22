@@ -1,16 +1,17 @@
-"","","S & W","AIC","BIC"
-"1","Inflation.lag1",0.0322,0.037578,0.053557
-"2","D.TB-3Mth.lag1",0.037351,0.037079,0.043606
-"3","Inflation.lag3",0.040795,0.041892,NA
-"4","D.PCED.lag1",0.305296,0.299828,0.269591
-"5","D.GDP Defl.lag1",0.000645,0.001146,NA
-"6","D.BusSec Defl.lag1",0.023922,0.023751,NA
-"7","D.PCED_FoodServ_Acc..lag1",0.178884,0.178887,0.130795
-"8","D.CPI_LFE.lag1",0.082784,0.08084,0.057194
-"9","D.PPI:FinGds.lag1",0.002585,0.003127,0.004517
-"10","D.GPDI Defl.lag2",NA,NA,0.035671
-"11","D.PCED_FoodServ_Acc..lag2",NA,NA,0.07902
-"12","D.PCED_Food_Bev.lag3",NA,NA,0.003773
-"13","D.PCED_FoodServ_Acc..lag3",NA,NA,0.027023
-"14","D.PCED_FoodServ_Acc..lag4",NA,NA,0.015988
-"15","FedFunds.lag1",NA,NA,0.000108
+"","variable","value.x","value.y","value"
+"1","out-of sample MSE","0.741337","0.764168","0.762583"
+"2","D.TB-3Mth.lag1","0.022845","0.02027","0.020959"
+"3","D.TM-6MTH.lag1","0.00553","0.011923","0.011819"
+"4","D.AAA Bond.lag1","0.001409",NA,NA
+"5","Emp: DurGoods.lag1","0.091413","0.069952","0.066332"
+"6","D.PCED.lag1","0.098581","0.054815","0.058384"
+"7","D.BusSec Defl.lag1","0.070527","0.011256","0.010067"
+"8","D.PCED_TransSvg.lag1","0.001335",NA,NA
+"9","D.PCED_FoodServ_Acc..lag1","0.20232","0.194577","0.193346"
+"10","D.CPI.lag1","0.17883",NA,NA
+"11","D.PPI:FinGds.lag1","0.100141","0.120506","0.120208"
+"12","Inflation.lag1",NA,"0.170097","0.166607"
+"13","D.PPI:IntMat.lag1",NA,"0.011103","0.008796"
+"14","Inflation.lag3",NA,"0.130365","0.122025"
+"15","D.PCED_FoodServ_Acc..lag3",NA,NA,"0.010902"
+"16","D.PPI:FinConsGds(Food).lag4",NA,NA,"0.004156"

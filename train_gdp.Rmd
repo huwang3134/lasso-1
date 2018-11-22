@@ -1,0 +1,180 @@
+---
+title: "SW and ADF test (GDP)"
+author: "Shuofan Zhang"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: pdf_document
+---
+
+```{r, include=T, echo=F, warning=F, 	message = FALSE}
+load("/Users/stanza/documents/github/lasso/sab_gdp.RData")
+source("/Users/stanza/documents/github/lasso/fun.R")
+library("glmnet")
+library("reshape2")
+library("cellranger")
+library("tidyverse")
+library("knitr")
+library("ggrepel")
+library("pander")
+library("kableExtra")
+library("tseries")
+library("urca")
+```
+
+## Data
+
+Data: 145+1-5=141 series in total.
+
+The "spread" series (difference between two I(1) series) are removed.
+
+One of the I(1), "CP3FM" was omitted in the original data set, now is added.
+
+log() is done.
+
+$y$ is GDP.
+
+The earliest 80% of data were used to estimate the coefficients, the rest 20% were used to calculate the out-of-sample MSE.
+
+```{r, include=T, echo=F, warning=F, 	message = FALSE}
+D.GDP = diff(bpraw$GDP) %>% as.data.frame()
+time = 1:dim(D.GDP)[1]
+l = ceiling(dim(D.GDP)[1]*0.8)
+ggplot(data=D.GDP, aes(x=time, y=.)) + geom_line() + geom_vline(xintercept=l, color="red")
+```
+
+## ADF test  
+
+Step 1, ADF test to the 146 original series.
+
+Step 2, mark "I(0)" variables as "I(0)".
+
+Step 3, ADF test to the first-differenced 146 series.
+
+Step 4, check for contradictions, found "PCED_RecServices" in AIC.
+
+Step 5, mark "I(1)" variable as "I(2)" (including "PCED_RecServices").
+
+Step 6, mark the rest as "I(1)".
+
+Step 7, repeat the above 6 steps for both "AIC" and "BIC".
+
+
+## Lasso 1  
+
+$$ 
+\begin{split} 
+\Delta y_t &=y_{t-1} \\
+&+ \Delta y_{t-1} + \Delta y_{t-2} + \Delta y_{t-3} + \Delta y_{t-4} \\
+&+  I(0)_{t-1} +  I(0)_{t-2} 
++  I(0)_{t-3} +  I(0)_{t-4} \\
+&+  I(1)_{t-1} +  I(1)_{t-2} 
++  I(1)_{t-3} +  I(1)_{t-4} \\
+&+  \Delta I(2)_{t-1} +  \Delta I(2)_{t-2} 
++  \Delta I(2)_{t-3} +  \Delta I(2)_{t-4}
+\end{split} 
+$$
+
+```{r include=T, message=F, warning=F, echo=F}
+#lasso1.sw = lasso111gdp(data = bpraw, tcode = t.sw)
+#trace1.sw = trace.plot.table(lasso1.sw$lasso, lambda.seq, lasso1.sw$lambda)
+#lasso1.aic = lasso111gdp(data = bpraw, tcode = t.aic)
+#trace1.aic = trace.plot.table(lasso1.aic$lasso, lambda.seq, lasso1.aic$lambda)
+#lasso1.bic = lasso111gdp(data = bpraw, tcode = t.bic)
+#trace1.bic = trace.plot.table(lasso1.bic$lasso, lambda.seq, lasso1.bic$lambda)
+train1.sw = GDP1train(data = bpraw, tcode = t.sw)
+train1.aic = GDP1train(data = bpraw, tcode = t.aic)
+train1.bic = GDP1train(data = bpraw, tcode = t.bic)
+trace1.sw = trace.plot.table(train1.sw$lasso, lambda.seq, train1.sw$lambda)
+trace1.aic = trace.plot.table(train1.aic$lasso, lambda.seq, train1.aic$lambda)
+trace1.bic = trace.plot.table(train1.bic$lasso, lambda.seq, train1.bic$lambda)
+sum1 = sumtable(trace1.sw, trace1.aic, trace1.bic)
+mses1 = c("out-of sample MSE", round(train1.sw$mse, digits = 6), 
+         round(train1.aic$mse, digits = 6), round(train1.bic$mse, digits = 6))
+sum1 = rbind(mses1, sum1)
+write.csv(sum1, file="/Users/stanza/documents/github/lasso/gdp1.csv")
+MSE1 = c(train1.sw$mse, train1.aic$mse, train1.bic$mse)
+```
+
+## Lasso 2  
+
+$$ 
+\begin{split} 
+\Delta y_t &=y_{t-1} \\
+&+ \Delta y_{t-1} + \Delta y_{t-2} + \Delta y_{t-3} + \Delta y_{t-4} \\
+&+  I(0)_{t-1} +  I(0)_{t-2} 
++  I(0)_{t-3} +  I(0)_{t-4} \\
+&+  \Delta I(1)_{t-1} +  \Delta I(1)_{t-2} 
++  \Delta I(1)_{t-3} +  \Delta I(1)_{t-4} \\
+&+  \Delta^2 I(2)_{t-1} +  \Delta^2 I(2)_{t-2} 
++  \Delta^2 I(2)_{t-3} +  \Delta^2 I(2)_{t-4}
+\end{split} 
+$$
+
+
+```{r include=T, message=F, warning=F, echo=F}
+#lasso2.sw = lasso222gdp(data = bpraw, tcode = t.sw)
+#trace2.sw = trace.plot.table(lasso2.sw$lasso, lambda.seq, lasso2.sw$lambda)
+#lasso2.aic = lasso222gdp(data = bpraw, tcode = t.aic)
+#trace2.aic = trace.plot.table(lasso2.aic$lasso, lambda.seq, lasso2.aic$lambda)
+#lasso2.bic = lasso222gdp(data = bpraw, tcode = t.bic)
+#trace2.bic = trace.plot.table(lasso2.bic$lasso, lambda.seq, lasso2.bic$lambda)
+train2.sw = GDP2train(data = bpraw, tcode = t.sw)
+train2.aic = GDP2train(data = bpraw, tcode = t.aic)
+train2.bic = GDP2train(data = bpraw, tcode = t.bic)
+trace2.sw = trace.plot.table(train2.sw$lasso, lambda.seq, train2.sw$lambda)
+trace2.aic = trace.plot.table(train2.aic$lasso, lambda.seq, train2.aic$lambda)
+trace2.bic = trace.plot.table(train2.bic$lasso, lambda.seq, train2.bic$lambda)
+sum2 = sumtable(trace2.sw, trace2.aic, trace2.bic)
+mses2 = c("out-of sample MSE", round(train2.sw$mse, digits = 6), 
+         round(train2.aic$mse, digits = 6), round(train2.bic$mse, digits = 6))
+sum2 = rbind(mses2, sum2)
+MSE2 = c(train2.sw$mse, train2.aic$mse, train2.bic$mse)
+write.csv(sum2, file="/Users/stanza/documents/github/lasso/gdp2.csv")
+```
+
+## Lasso 3
+
+$$ 
+\begin{split} 
+\Delta y_t &=y_{t-1} \\
+&+ \Delta y_{t-1} + \Delta y_{t-2} + \Delta y_{t-3} + \Delta y_{t-4} \\
+&+  I(0)_{t-1} +  I(0)_{t-2} 
++  I(0)_{t-3} +  I(0)_{t-4} \\
+&+  \Delta I(1)_{t-1} +  \Delta I(1)_{t-2} 
++  \Delta I(1)_{t-3} +  \Delta I(1)_{t-4} \\
+&+  \Delta^2 I(2)_{t-1} +  \Delta^2 I(2)_{t-2} 
++  \Delta^2 I(2)_{t-3} +  \Delta^2 I(2)_{t-4} \\
+&+ I(1)_{t-1} + \Delta I(2)_{t-1}
+\end{split} 
+$$
+
+```{r include=T, message=F, warning=F, echo=F}
+#lasso3.sw = lasso333gdp(data = bpraw, tcode = t.sw)
+#trace3.sw = trace.plot.table(lasso3.sw$lasso, lambda.seq, lasso3.sw$lambda)
+#lasso3.aic = lasso333gdp(data = bpraw, tcode = t.aic)
+#trace3.aic = trace.plot.table(lasso3.aic$lasso, lambda.seq, lasso3.aic$lambda)
+#lasso3.bic = lasso333gdp(data = bpraw, tcode = t.bic)
+#trace3.bic = trace.plot.table(lasso3.bic$lasso, lambda.seq, lasso3.bic$lambda)
+train3.sw = GDP3train(data = bpraw, tcode = t.sw)
+train3.aic = GDP3train(data = bpraw, tcode = t.aic)
+train3.bic = GDP3train(data = bpraw, tcode = t.bic)
+trace3.sw = trace.plot.table(train3.sw$lasso, lambda.seq, train3.sw$lambda)
+trace3.aic = trace.plot.table(train3.aic$lasso, lambda.seq, train3.aic$lambda)
+trace3.bic = trace.plot.table(train3.bic$lasso, lambda.seq, train3.bic$lambda)
+sum3 = sumtable(trace3.sw, trace3.aic, trace3.bic)
+mses3 = c("out-of sample MSE", round(train3.sw$mse, digits = 6), 
+         round(train3.aic$mse, digits = 6), round(train3.bic$mse, digits = 6))
+sum3 = rbind(mses3, sum3)
+write.csv(sum3, file="/Users/stanza/documents/github/lasso/gdp3.csv")
+MSE3 = c(train3.sw$mse, train3.aic$mse, train3.bic$mse)
+mses = rbind(MSE1, MSE2, MSE3)
+colnames(mses) = c("SW", "AIC", "BIC")
+rownames(mses) = c("LASSO 1", "LASSO 2", "LASSO 3")
+pander(mses, caption = "out-of-sample MSE, when the dependent variable is inflation")
+```
+
+
+
+
+
+
+

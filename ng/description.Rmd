@@ -1,0 +1,69 @@
+---
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: pdf_document
+---
+
+# Data
+
+Data: NG data, 131-8=123 series in total.
+
+The "spread" series (difference between two I(1) series) are removed.
+
+log() is done.
+
+## ADF test  
+
+No contradiction of being I(0) or I(2) in NG data.
+
+## Lasso 1
+
+I(2) is first differenced, others are original.
+
+$$ 
+\begin{split} 
+y_t &= I(0)_{t-1} +  I(0)_{t-2} 
++  I(0)_{t-3} +  I(0)_{t-4} \\
+&+  I(1)_{t-1} +  I(1)_{t-2} 
++  I(1)_{t-3} +  I(1)_{t-4} \\
+&+  \Delta I(2)_{t-1} +  \Delta I(2)_{t-2} 
++  \Delta I(2)_{t-3} +  \Delta I(2)_{t-4}
+\end{split} 
+$$
+
+
+## Lasso 2
+
+All stationary.
+
+$$ 
+\begin{split} 
+y_t &= I(0)_{t-1} +  I(0)_{t-2} 
++  I(0)_{t-3} +  I(0)_{t-4} \\
+&+  \Delta I(1)_{t-1} +  \Delta I(1)_{t-2} 
++  \Delta I(1)_{t-3} +  \Delta I(1)_{t-4} \\
+&+  \Delta^2 I(2)_{t-1} +  \Delta^2 I(2)_{t-2} 
++  \Delta^2 I(2)_{t-3} +  \Delta^2 I(2)_{t-4}
+\end{split} 
+$$
+
+## Lasso 3
+
+Combination of Lasso 1 and 2.
+
+$$ 
+\begin{split} 
+y_t &=I(0)_{t-1} +  I(0)_{t-2} 
++  I(0)_{t-3} +  I(0)_{t-4} \\
+&+  \Delta I(1)_{t-1} +  \Delta I(1)_{t-2} 
++  \Delta I(1)_{t-3} +  \Delta I(1)_{t-4} \\
+&+  \Delta^2 I(2)_{t-1} +  \Delta^2 I(2)_{t-2} 
++  \Delta^2 I(2)_{t-3} +  \Delta^2 I(2)_{t-4} \\
+&+ I(1)_{t-1} + \Delta I(2)_{t-1}
+\end{split} 
+$$
+
+
+
+
+
+

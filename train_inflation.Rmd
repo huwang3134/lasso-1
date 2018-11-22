@@ -1,0 +1,195 @@
+---
+title: "SW and ADF test (Inflation)"
+author: "Shuofan Zhang"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: pdf_document
+---
+
+```{r, include=T, echo=F, warning=F, 	message = FALSE}
+library("glmnet")
+library("reshape2")
+library("cellranger")
+library("tidyverse")
+library("knitr")
+library("ggrepel")
+library("pander")
+library("kableExtra")
+library("tseries")
+library("urca")
+source("/Users/stanza/documents/github/lasso/fun.R")
+load("/Users/stanza/documents/github/lasso/sab_gdp.RData")
+```
+
+
+* Stock and Watson twice differenced the CPI to make it stationary.
+
+* ADF test with AIC/BIC conclude Inflation as I(0) with full set of observations.
+
+* ADF test with AIC/BIC conclude Inflation as I(1) with the first 80% of observations.
+
+
+
+```{r, echo=F, message=F, warning=F}
+t.inf = t.sw
+t.inf[short=="CPI"] = "1"
+Inflation = diff(bpraw$CPI) %>% as.data.frame()
+time = 1:dim(Inflation)[1]
+l = ceiling(dim(Inflation)[1]*0.8)
+ggplot(data=Inflation, aes(x=time, y=.)) + geom_line() + geom_vline(xintercept=l, color="red")
+```
+
+# Inflation as I(0)
+
+```{r include=T, message=F, warning=F, echo=F}
+#lasso1.sw = lasso111inf(data = bpraw, tcode = t.inf)
+#trace1.sw = trace.plot.table(lasso1.sw$lasso, lambda.seq, lasso1.sw$lambda)
+#lasso1.aic = lasso111inf(data = bpraw, tcode = t.aic)
+#trace1.aic = trace.plot.table(lasso1.aic$lasso, lambda.seq, lasso1.aic$lambda)
+#lasso1.bic = lasso111inf(data = bpraw, tcode = t.bic)
+#trace1.bic = trace.plot.table(lasso1.bic$lasso, lambda.seq, lasso1.bic$lambda)
+train1.sw = inf1train(data = bpraw, tcode = t.sw)
+train1.aic = inf1train(data = bpraw, tcode = t.aic)
+train1.bic = inf1train(data = bpraw, tcode = t.bic)
+trace1.sw = trace.plot.table(train1.sw$lasso, lambda.seq, train1.sw$lambda)
+trace1.aic = trace.plot.table(train1.aic$lasso, lambda.seq, train1.aic$lambda)
+trace1.bic = trace.plot.table(train1.bic$lasso, lambda.seq, train1.bic$lambda)
+sum1 = sumtable(trace1.sw, trace1.aic, trace1.bic)
+mses1 = c("out-of sample MSE", round(train1.sw$mse, digits = 6), 
+         round(train1.aic$mse, digits = 6), round(train1.bic$mse, digits = 6))
+sum1 = rbind(mses1, sum1)
+MSE1 = c(train1.sw$mse, train1.aic$mse, train1.bic$mse)
+write.csv(sum1, "/Users/stanza/documents/github/lasso/inf1.csv")
+```
+
+```{r include=T, message=F, warning=F, echo=F}
+#lasso2.sw = lasso222inf(data = bpraw, tcode = t.inf)
+#trace2.sw = trace.plot.table(lasso2.sw$lasso, lambda.seq, lasso2.sw$lambda)
+#lasso2.aic = lasso222inf(data = bpraw, tcode = t.aic)
+#trace2.aic = trace.plot.table(lasso2.aic$lasso, lambda.seq, lasso2.aic$lambda)
+#lasso2.bic = lasso222inf(data = bpraw, tcode = t.bic)
+#trace2.bic = trace.plot.table(lasso2.bic$lasso, lambda.seq, lasso2.bic$lambda)
+train2.sw = inf2train(data = bpraw, tcode = t.sw)
+train2.aic = inf2train(data = bpraw, tcode = t.aic)
+train2.bic = inf2train(data = bpraw, tcode = t.bic)
+trace2.sw = trace.plot.table(train2.sw$lasso, lambda.seq, train2.sw$lambda)
+trace2.aic = trace.plot.table(train2.aic$lasso, lambda.seq, train2.aic$lambda)
+trace2.bic = trace.plot.table(train2.bic$lasso, lambda.seq, train2.bic$lambda)
+sum2 = sumtable(trace2.sw, trace2.aic, trace2.bic)
+mses2 = c("out-of sample MSE", round(train2.sw$mse, digits = 6), 
+         round(train2.aic$mse, digits = 6), round(train2.bic$mse, digits = 6))
+sum2 = rbind(mses2, sum2)
+MSE2 = c(train2.sw$mse, train2.aic$mse, train2.bic$mse)
+write.csv(sum2, "/Users/stanza/documents/github/lasso/inf2.csv")
+```
+
+```{r include=T, message=F, warning=F, echo=F}
+#lasso3.sw = lasso333inf(data = bpraw, tcode = t.inf)
+#trace3.sw = trace.plot.table(lasso3.sw$lasso, lambda.seq, lasso3.sw$lambda)
+#lasso3.aic = lasso333inf(data = bpraw, tcode = t.aic)
+#trace3.aic = trace.plot.table(lasso3.aic$lasso, lambda.seq, lasso3.aic$lambda)
+#lasso3.bic = lasso333inf(data = bpraw, tcode = t.bic)
+#trace3.bic = trace.plot.table(lasso3.bic$lasso, lambda.seq, lasso3.bic$lambda)
+train3.sw = inf3train(data = bpraw, tcode = t.sw)
+train3.aic = inf3train(data = bpraw, tcode = t.aic)
+train3.bic = inf3train(data = bpraw, tcode = t.bic)
+trace3.sw = trace.plot.table(train3.sw$lasso, lambda.seq, train3.sw$lambda)
+trace3.aic = trace.plot.table(train3.aic$lasso, lambda.seq, train3.aic$lambda)
+trace3.bic = trace.plot.table(train3.bic$lasso, lambda.seq, train3.bic$lambda)
+sum3 = sumtable(trace3.sw, trace3.aic, trace3.bic)
+mses3 = c("out-of sample MSE", round(train3.sw$mse, digits = 6), 
+         round(train3.aic$mse, digits = 6), round(train3.bic$mse, digits = 6))
+sum3 = rbind(mses3, sum3)
+MSE3 = c(train3.sw$mse, train3.aic$mse, train3.bic$mse)
+write.csv(sum3, "/Users/stanza/documents/github/lasso/inf3.csv")
+mses = rbind(MSE1, MSE2, MSE3)
+colnames(mses) = c("SW", "AIC", "BIC")
+rownames(mses) = c("LASSO 1", "LASSO 2", "LASSO 3")
+pander(mses, caption = "out-of-sample MSE, when the dependent variable is inflation")
+```
+
+# Inflation as I(1)
+
+```{r include=T, message=F, warning=F, echo=F}
+D.Inflation = apply(Inflation, 2, diff) %>% as.data.frame()
+time = 1:dim(D.Inflation)[1]
+l = ceiling(dim(D.Inflation)[1]*0.8)
+ggplot(data=D.Inflation, aes(x=time, y=.)) + geom_line() + geom_vline(xintercept=l, color="red")
+```
+
+```{r include=T, message=F, warning=F, echo=F}
+t.aic.2 = t.aic
+t.aic.2[short=="CPI"] = "2"
+t.bic.2 = t.bic
+t.bic.2[short=="CPI"] = "2"
+#lasso1.sw2 = lasso111inf2(data = bpraw, tcode = t.sw)
+#trace1.sw2 = trace.plot.table(lasso1.sw2$lasso, lambda.seq, lasso1.sw2$lambda)
+#lasso1.aic2 = lasso111inf2(data = bpraw, tcode = t.aic.2)
+#trace1.aic2 = trace.plot.table(lasso1.aic2$lasso, lambda.seq, lasso1.aic2$lambda)
+#lasso1.bic2 = lasso111inf2(data = bpraw, tcode = t.bic.2)
+#trace1.bic2 = trace.plot.table(lasso1.bic2$lasso, lambda.seq, lasso1.bic2$lambda)
+train1.2.sw = inf1.2train(data = bpraw, tcode = t.sw)
+train1.2.aic = inf1.2train(data = bpraw, tcode = t.aic.2)
+train1.2.bic = inf1.2train(data = bpraw, tcode = t.bic.2)
+trace1.2.sw = trace.plot.table(train1.2.sw$lasso, lambda.seq, train1.2.sw$lambda)
+trace1.2.aic = trace.plot.table(train1.2.aic$lasso, lambda.seq, train1.2.aic$lambda)
+trace1.2.bic = trace.plot.table(train1.2.bic$lasso, lambda.seq, train1.2.bic$lambda)
+sum1.2 = sumtable(trace1.2.sw, trace1.2.aic, trace1.2.bic)
+mses1.2 = c("out-of sample MSE", round(train1.2.sw$mse, digits = 6), 
+         round(train1.2.aic$mse, digits = 6), round(train1.2.bic$mse, digits = 6))
+sum1.2 = rbind(mses1.2, sum1.2)
+MSE1.2 = c(train1.2.sw$mse, train1.2.aic$mse, train1.2.bic$mse)
+write.csv(sum1.2, "/Users/stanza/documents/github/lasso/inf1_2.csv")
+```
+
+```{r include=T, message=F, warning=F, echo=F}
+#lasso2.sw2 = lasso222inf(data = bpraw, tcode = t.sw)
+#trace2.sw2 = trace.plot.table(lasso2.sw2$lasso, lambda.seq, lasso2.sw2$lambda)
+#lasso2.aic2 = lasso222inf(data = bpraw, tcode = t.aic.2)
+#trace2.aic2 = trace.plot.table(lasso2.aic2$lasso, lambda.seq, lasso2.aic2$lambda)
+#lasso2.bic2 = lasso222inf(data = bpraw, tcode = t.bic.2)
+#trace2.bic2 = trace.plot.table(lasso2.bic2$lasso, lambda.seq, lasso2.bic2$lambda)
+train2.2.sw = inf2.2train(data = bpraw, tcode = t.sw)
+train2.2.aic = inf2.2train(data = bpraw, tcode = t.aic.2)
+train2.2.bic = inf2.2train(data = bpraw, tcode = t.bic.2)
+trace2.2.sw = trace.plot.table(train2.2.sw$lasso, lambda.seq, train2.2.sw$lambda)
+trace2.2.aic = trace.plot.table(train2.2.aic$lasso, lambda.seq, train2.2.aic$lambda)
+trace2.2.bic = trace.plot.table(train2.2.bic$lasso, lambda.seq, train2.2.bic$lambda)
+sum2.2 = sumtable(trace2.2.sw, trace2.2.aic, trace2.2.bic)
+mses2.2 = c("out-of sample MSE", round(train2.2.sw$mse, digits = 6), 
+         round(train2.2.aic$mse, digits = 6), round(train2.2.bic$mse, digits = 6))
+sum2.2 = rbind(mses2.2, sum2.2)
+MSE2.2 = c(train2.2.sw$mse, train2.2.aic$mse, train2.2.bic$mse)
+write.csv(sum2.2, "/Users/stanza/documents/github/lasso/inf2_2.csv")
+```
+
+```{r include=T, message=F, warning=F, echo=F}
+#lasso3.sw2 = lasso333inf(data = bpraw, tcode = t.sw)
+#trace3.sw2 = trace.plot.table(lasso3.sw2$lasso, lambda.seq, lasso3.sw2$lambda)
+#lasso3.aic2 = lasso333inf(data = bpraw, tcode = t.aic.2)
+#trace3.aic2 = trace.plot.table(lasso3.aic2$lasso, lambda.seq, lasso3.aic2$lambda)
+#lasso3.bic2 = lasso333inf(data = bpraw, tcode = t.bic.2)
+#trace3.bic2 = trace.plot.table(lasso3.bic2$lasso, lambda.seq, lasso3.bic2$lambda)
+train3.2.sw = inf3.2train(data = bpraw, tcode = t.sw)
+train3.2.aic = inf3.2train(data = bpraw, tcode = t.aic.2)
+train3.2.bic = inf3.2train(data = bpraw, tcode = t.bic.2)
+trace3.2.sw = trace.plot.table(train3.2.sw$lasso, lambda.seq, train3.2.sw$lambda)
+trace3.2.aic = trace.plot.table(train3.2.aic$lasso, lambda.seq, train3.2.aic$lambda)
+trace3.2.bic = trace.plot.table(train3.2.bic$lasso, lambda.seq, train3.2.bic$lambda)
+sum3.2 = sumtable(trace3.2.sw, trace3.2.aic, trace3.2.bic)
+mses3.2 = c("out-of sample MSE", round(train3.2.sw$mse, digits = 6), 
+         round(train3.2.aic$mse, digits = 6), round(train3.2.bic$mse, digits = 6))
+sum3.2 = rbind(mses3.2, sum3.2)
+MSE3.2 = c(train3.2.sw$mse, train3.2.aic$mse, train3.2.bic$mse)
+write.csv(sum3.2, "/Users/stanza/documents/github/lasso/inf3_2.csv")
+mses.2 = rbind(MSE1.2, MSE2.2, MSE3.2)
+colnames(mses.2) = c("SW", "AIC", "BIC")
+rownames(mses.2) = c("LASSO 1", "LASSO 2", "LASSO 3")
+pander(mses.2, caption = "out-of-sample MSE, when the dependent variable is first-differenced inflation")
+```
+
+
+
+
+
+
+

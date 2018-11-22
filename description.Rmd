@@ -1,0 +1,85 @@
+---
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: pdf_document
+---
+
+# Data
+
+Data: Stock and Watson, 145+1-5=141 series in total.
+
+The "spread" series (difference between two I(1) series) are removed.
+
+One of the I(1), "CP3FM" was omitted in the original data set, now is added.
+
+log() is done.
+
+# ADF test  
+
+Step 1, ADF test to the 146 original series.
+
+Step 2, mark "I(0)" variables as "I(0)".
+
+Step 3, ADF test to the first-differenced 146 series.
+
+Step 4, check for contradictions, found "PCED_RecServices" in AIC.
+
+Step 5, mark "I(1)" variable as "I(2)" (including "PCED_RecServices").
+
+Step 6, mark the rest as "I(1)".
+
+Step 7, repeat the above 6 steps for both "AIC" and "BIC".
+
+# Lasso 1  
+
+$$ 
+\begin{split} 
+\Delta y_t &=y_{t-1} \\
+&+ \Delta y_{t-1} + \Delta y_{t-2} + \Delta y_{t-3} + \Delta y_{t-4} \\
+&+  I(0)_{t-1} +  I(0)_{t-2} 
++  I(0)_{t-3} +  I(0)_{t-4} \\
+&+  I(1)_{t-1} +  I(1)_{t-2} 
++  I(1)_{t-3} +  I(1)_{t-4} \\
+&+  \Delta I(2)_{t-1} +  \Delta I(2)_{t-2} 
++  \Delta I(2)_{t-3} +  \Delta I(2)_{t-4}
+\end{split} 
+$$
+
+
+# Lasso 2  
+
+$$ 
+\begin{split} 
+\Delta y_t &=y_{t-1} \\
+&+ \Delta y_{t-1} + \Delta y_{t-2} + \Delta y_{t-3} + \Delta y_{t-4} \\
+&+  I(0)_{t-1} +  I(0)_{t-2} 
++  I(0)_{t-3} +  I(0)_{t-4} \\
+&+  \Delta I(1)_{t-1} +  \Delta I(1)_{t-2} 
++  \Delta I(1)_{t-3} +  \Delta I(1)_{t-4} \\
+&+  \Delta^2 I(2)_{t-1} +  \Delta^2 I(2)_{t-2} 
++  \Delta^2 I(2)_{t-3} +  \Delta^2 I(2)_{t-4}
+\end{split} 
+$$
+
+# Lasso 3
+
+$$ 
+\begin{split} 
+\Delta y_t &=y_{t-1} \\
+&+ \Delta y_{t-1} + \Delta y_{t-2} + \Delta y_{t-3} + \Delta y_{t-4} \\
+&+  I(0)_{t-1} +  I(0)_{t-2} 
++  I(0)_{t-3} +  I(0)_{t-4} \\
+&+  \Delta I(1)_{t-1} +  \Delta I(1)_{t-2} 
++  \Delta I(1)_{t-3} +  \Delta I(1)_{t-4} \\
+&+  \Delta^2 I(2)_{t-1} +  \Delta^2 I(2)_{t-2} 
++  \Delta^2 I(2)_{t-3} +  \Delta^2 I(2)_{t-4} \\
+&+ I(1)_{t-1} + \Delta I(2)_{t-1}
+\end{split} 
+$$
+
+
+
+
+
+
+
+
