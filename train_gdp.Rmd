@@ -1,5 +1,5 @@
 ---
-title: "SW and ADF test (GDP)"
+title: "SW (GDP)"
 author: "Shuofan Zhang"
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output: pdf_document
