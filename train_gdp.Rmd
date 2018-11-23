@@ -198,13 +198,19 @@ cf = as.data.frame(lapply(GDPols$coefficients[-1], rep, dim(x.test)[1]))
 fit.temp = cf * x.test
 fit.GDP = rowSums(fit.temp)
 out.mse.GDP = mean((y.test-fit.GDP)^2)
-trace.interest(train1.sw$lasso, lambda.seq)
+trace.interest(train1.sw$lasso, lambda.seq) 
 #out.mse.GDP
 ```
 
+The trace plot shows the paths of the four lags of the two interest rates that are I(1) variables: "3-month treasury bill (TB-3Mth)" and "3-Month AA Financial Commercial Paper Rate post 1997 … linked to XLI CP90 before 1997 (Com Paper)". 
 
+Previously, when we had the difference of these two variables "CP_Tbill Spread" in the data, it was selected by the LASSO and the absolute value of its coefficient was the biggest among other non-zero coefficients. Since we have removed all the spreads in the data, I try to figure out what is happening to the two "parents" I(1) variables.
+ 
+From the graph, we see:
 
+1, when $\lambda=0$, which is the OLS, the magnitude and signs of the estimated coefficients all make sense, for example, lag-1 of TB-3Mth is positive and has a big coefficient, while lag-1 of Com Paper is negative and also has a big absolute coefficient. I think this may indicate that OLS works OK in terms of estimating co-integrating vectors.
 
+2, Once $\lambda$ becomes non-zero, (in our case, the smallest non-zero $\lambda=0$ is 0.0025) seven out of eight of these variables are dropped immediately, which is a bit disappointing. 
 
-
+Note: Although this graph only shows the trace of eight variables (two series with four lags), the regression was conducted with all 146 variables.
 
