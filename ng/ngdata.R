@@ -28,6 +28,9 @@ fd.yr3 = diff(ydata$yr3)
 fd.yr4 = diff(ydata$yr4)
 fd.yr5 = diff(ydata$yr5)
 yr2 = ydata$yr2
+yr3 = ydata$yr3
+yr4 = ydata$yr4
+yr5 = ydata$yr5
 ngraw = ngraw[1:dim(ydata)[1] , ]
 ngraw[, tcode==4 | tcode==5 | tcode==6] = log(ngraw[, tcode==4 | tcode==5 | tcode==6])
 # keep full set of data before remove "spread"

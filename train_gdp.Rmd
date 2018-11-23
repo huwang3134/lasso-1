@@ -26,7 +26,7 @@ Data: 145+1-5=141 series in total.
 
 The "spread" series (difference between two I(1) series) are removed.
 
-One of the I(1), "CP3FM" was omitted in the original data set, now is added.
+One of the I(1), "CP3FM" (short name: "Com Paper") was omitted in the original data set, now is added.
 
 log() is done.
 
@@ -57,6 +57,9 @@ Step 6, mark the rest as "I(1)".
 
 Step 7, repeat the above 6 steps for both "AIC" and "BIC".
 
+## AR(p) modeL  
+
+* The estimation method is OLS; lags are chosen by AIC.
 
 ## Lasso 1  
 
@@ -170,6 +173,33 @@ mses = rbind(MSE1, MSE2, MSE3)
 colnames(mses) = c("SW", "AIC", "BIC")
 rownames(mses) = c("LASSO 1", "LASSO 2", "LASSO 3")
 pander(mses, caption = "out-of-sample MSE, when the dependent variable is inflation")
+```
+
+* AIC chooses 2 lags for the GDP growth.
+
+* The out-of-sample MSE of AR(2) is 0.89.
+
+* The estimated AR(1) coefficient is 0.3078.
+
+```{r include=T, message=F, warning=F, echo=F}
+D.GDP = diff(bpraw$GDP)
+#ar(D.GDP, order.max = 1)
+#ar(D.GDP, aic = TRUE)
+maxlag.GDP = 2
+y = lag0(maxlag = maxlag.GDP, D.GDP) %>% scale()
+x = lags(maxlag = maxlag.GDP, D.GDP) 
+l = ceiling(length(y)*0.8)
+y.train = y[1:l]
+y.test = y[(l+1):length(y)]
+x.train = x[1:l, ] 
+x.test = x[(l+1):dim(x)[1], ]
+GDPols = lm(y.train ~ x.train)
+cf = as.data.frame(lapply(GDPols$coefficients[-1], rep, dim(x.test)[1]))
+fit.temp = cf * x.test
+fit.GDP = rowSums(fit.temp)
+out.mse.GDP = mean((y.test-fit.GDP)^2)
+trace.interest(train1.sw$lasso, lambda.seq)
+#out.mse.GDP
 ```
 
 

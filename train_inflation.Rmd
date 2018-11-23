@@ -27,8 +27,6 @@ load("/Users/stanza/documents/github/lasso/sab_gdp.RData")
 
 * ADF test with AIC/BIC conclude Inflation as I(1) with the first 80% of observations.
 
-
-
 ```{r, echo=F, message=F, warning=F}
 t.inf = t.sw
 t.inf[short=="CPI"] = "1"
@@ -39,6 +37,7 @@ ggplot(data=Inflation, aes(x=time, y=.)) + geom_line() + geom_vline(xintercept=l
 ```
 
 # Inflation as I(0)
+
 
 ```{r include=T, message=F, warning=F, echo=F}
 #lasso1.sw = lasso111inf(data = bpraw, tcode = t.inf)
@@ -107,10 +106,38 @@ rownames(mses) = c("LASSO 1", "LASSO 2", "LASSO 3")
 pander(mses, caption = "out-of-sample MSE, when the dependent variable is inflation")
 ```
 
+* AIC chooses 3 lags for Inflation.
+
+* The out-of-sample MSE of AR(3) is 2.266.
+
+* The estimated AR(1) coefficient is 0.7565.
+
+```{r include=T, message=F, warning=F, echo=F}
+#ar(D.Inflation, aic = TRUE)
+maxlag.inf = 3
+Inflation = diff(bpraw$CPI)
+y = lag0(maxlag = maxlag.inf, Inflation) %>% scale()
+x = lags(maxlag = maxlag.inf, Inflation) 
+l = ceiling(length(y)*0.8)
+y.train = y[1:l]
+y.test = y[(l+1):length(y)]
+x.train = x[1:l, ] 
+x.test = x[(l+1):dim(x)[1], ]
+infols = lm(y.train ~ x.train)
+cf = as.data.frame(lapply(infols$coefficients[-1], rep, dim(x.test)[1]))
+fit.temp = cf * x.test
+fit.inf = rowSums(fit.temp)
+out.mse.inf = mean((y.test-fit.inf)^2)
+#out.mse.inf
+#ar(Inflation, order.max = 1)
+rbind(adf.auto(Inflation, criteria = "AIC"), adf.auto(Inflation, criteria = "BIC"), adf.auto(y.train, criteria = "AIC"), adf.auto(y.train, criteria = "BIC")) %>% pander(caption="ADF test for Inflation")
+```
+
 # Inflation as I(1)
 
 ```{r include=T, message=F, warning=F, echo=F}
-D.Inflation = apply(Inflation, 2, diff) %>% as.data.frame()
+D.Inflation = diff(Inflation) %>% as.data.frame()
+#ar(D.Inflation, order.max = 1)
 time = 1:dim(D.Inflation)[1]
 l = ceiling(dim(D.Inflation)[1]*0.8)
 ggplot(data=D.Inflation, aes(x=time, y=.)) + geom_line() + geom_vline(xintercept=l, color="red")
@@ -188,7 +215,31 @@ pander(mses.2, caption = "out-of-sample MSE, when the dependent variable is firs
 ```
 
 
+* AIC chooses 4 lags for the first-differenced inflation.
 
+* The out-of-sample MSE of AR(4) is 1.969.
+
+* The estimated AR(1) coefficient is -0.2728.
+
+
+```{r include=T, message=F, warning=F, echo=F}
+# differenced inflation
+maxlag.d.inf = 4
+D.Inflation = diff(Inflation)
+y = lag0(maxlag = maxlag.d.inf, D.Inflation) %>% scale()
+x = lags(maxlag = maxlag.d.inf, D.Inflation) 
+l = ceiling(length(y)*0.8)
+y.train = y[1:l]
+y.test = y[(l+1):length(y)]
+x.train = x[1:l, ] 
+x.test = x[(l+1):dim(x)[1], ]
+infols = lm(y.train ~ x.train)
+cf = as.data.frame(lapply(infols$coefficients[-1], rep, dim(x.test)[1]))
+fit.temp = cf * x.test
+fit.inf = rowSums(fit.temp)
+out.mse.Dinf = mean((y.test-fit.inf)^2)
+#out.mse.Dinf
+```
 
 
 

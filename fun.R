@@ -144,114 +144,6 @@ adf.auto <- function(data, criteria) {
  return(tb)
 }
 
-
- 
-sumtable <- function(t1, t2, t3){# t1, t2, t3 are the outputs from trace function
-  variable = c(t1$coef[,2] %>% as.character(), 
-               t2$coef[,2] %>% as.character(), 
-               t3$coef[,2] %>% as.character()) %>% unique() %>% 
-    as.data.frame(stringsAsFactors = FALSE)
-  colnames(variable) = "variable"
-  sum.table = left_join(variable, t1$coef[,2:3]) %>% 
-    left_join(., t2$coef[,2:3], by = "variable") %>%
-    left_join(., t3$coef[,2:3], by = "variable") %>%
-    as.data.frame(stringsAsFactors = FALSE)
-  sum.table[ , -1] = round(sum.table[ , -1] , digits = 6)
-  return(sum.table)
-}
-
-
-ng1train <- function(data,  yr, tcode){
-  ytem = yr[-1]
-  y <- lag0(maxlag , ytem) %>% scale() %>% as.numeric()# dependent variable (3-224=222), done
-  #y.lags <- lags(maxlag, ytem)
-  xtem = data[-1,]
-  xtem[ , tcode=="2"] <- apply( data[ , tcode=="2"], 2, diff )
-  colnames(xtem)[tcode=="2"] = 
-    paste0("D.", colnames(xtem)[tcode=="2"])
-  xtem = lags(maxlag , xtem)  # explanatory variables (2-223=222), done
-  x = xtem %>% scale()
-  # train
-  l = ceiling(dim(x)[1]*0.8)
-  x.train = x[1:l,] 
-  x.test = x[(l+1):dim(x)[1] , ]
-  y.train = y[1:l]
-  y.test = y[(l+1):length(y)]
-  p.train = dim(x.train)[2]
-  n.train = dim(x.train)[1]
-  lambda.train = sqrt(log( p.train ) / n.train )
-  # fit model, collect data
-  lasso = glmnet(x.train, y.train, alpha=1, thresh=1E-5, lambda= lambda.seq, maxit = 10^9)
-  fitted = predict(lasso , s=lambda.seq[which.min(abs(lambda.seq-lambda.train))] , newx = x.test)
-  out.mse = mean((y.test-fitted)^2)
-  list = list(lasso=lasso, mse=out.mse, lambda = lambda.train)
-  return(list)
-}
-
-ng2train <- function(data, yr, tcode){
-  # create data
-  i0 = data[-(1:2) , tcode=="0"]
-  di1 = apply(data[,tcode=="1"], 2, diff)
-  di1 = di1[-1,]
-  colnames(di1) = paste0("D.", colnames(di1))
-  di2 = apply(data[,tcode=="2"], 2, diff)
-  d2i2 = apply(di2, 2, diff)
-  colnames(d2i2) = paste0("D2.", colnames(d2i2))
-  x = cbind(i0, di1, d2i2)
-  x = lags(maxlag , x) %>% scale() # x lost 2 obs
-  ytem = yr[-(1:2)]
-  y = lag0(maxlag, ytem) %>% scale()
-  # train
-  l = ceiling(dim(x)[1]*0.8)
-  x.train = x[1:l,] 
-  x.test = x[(l+1):dim(x)[1] , ]
-  y.train = y[1:l]
-  y.test = y[(l+1):length(y)]
-  p.train = dim(x.train)[2]
-  n.train = dim(x.train)[1]
-  lambda.train = sqrt(log( p.train ) / n.train )
-  # fit model, collect data
-  lasso = glmnet(x.train, y.train, alpha=1, thresh=1E-5, lambda= lambda.seq, maxit = 10^9)
-  fitted = predict(lasso , s=lambda.seq[which.min(abs(lambda.seq-lambda.train))] , newx = x.test)
-  out.mse = mean((y.test-fitted)^2)
-  list = list(lasso=lasso, mse=out.mse, lambda = lambda.train)
-  return(list)
-}
-
-
-ng3train <- function(data, tcode, yr){
-  # create data
-  ytem = yr[-(1:2)]
-  y = lag0(maxlag, ytem) %>% scale()
-  i0 = data[ , tcode=="0"] # *
-  i1 = data[,tcode=="1"] # *
-  i2 = data[,tcode=="2"]
-  di1 = apply(i1, 2, diff) # *
-  di2 = apply(i2, 2, diff) # *
-  d2i2 = apply(di2, 2, diff) # *
-  colnames(di1) = paste0("D.", colnames(di1))
-  colnames(di2) = paste0("D.", colnames(di2))
-  colnames(d2i2) = paste0("D2.", colnames(d2i2))
-  xtem = cbind(i0[-(1:2),] , di1[-1,] , d2i2)
-  xtem = lags(maxlag, xtem)
-  xtem2 = cbind( i1[-(1:2),] , di2[-1,])
-  xtem2 = lag1(maxlag, xtem2)
-  #tt = 1:dim(xtem)[1] # remove time trend
-  #x = cbind(tt, xtem, xtem2) %>% scale()
-  x = cbind(xtem, xtem2) %>% scale()
-  p = dim(x)[2]
-  n = dim(x)[1]
-  lambda.fix = sqrt(log( p ) / n )
-  # fit model, collect data
-  lasso.5 = glmnet(x, y, alpha=1, thresh=1E-5, lambda= lambda.seq, maxit = 10^9)
-  fitted.5 = predict(lasso.5 , s=lambda.seq[which.min(abs(lambda.seq-lambda.fix))] , newx = x)
-  mse.5 = mean((y-fitted.5)^2)
-  mse.out5 = out.mse(x, y, lambda.seq, p)
-  list = list(lasso = lasso.5, mse = mse.5, mse.out = mse.out5, lambda = lambda.fix)
-  return(list)
-}
-
-
 adf.drift <- function(data, criteria) {
   tb = data.frame(Series = character(), Conclusion = character(), Type = character() , 
                   Lags = numeric() , 
@@ -294,6 +186,118 @@ adf.drift <- function(data, criteria) {
   }
   return(tb)
 }
+ 
+sumtable <- function(t1, t2, t3){# t1, t2, t3 are the outputs from trace function
+  variable = c(t1$coef[,2] %>% as.character(), 
+               t2$coef[,2] %>% as.character(), 
+               t3$coef[,2] %>% as.character()) %>% unique() %>% 
+    as.data.frame(stringsAsFactors = FALSE)
+  colnames(variable) = "variable"
+  sum.table = left_join(variable, t1$coef[,2:3]) %>% 
+    left_join(., t2$coef[,2:3], by = "variable") %>%
+    left_join(., t3$coef[,2:3], by = "variable") %>%
+    as.data.frame(stringsAsFactors = FALSE)
+  sum.table[ , -1] = round(sum.table[ , -1] , digits = 6)
+  return(sum.table)
+}
+
+
+ng1train <- function(data,  yr, tcode){
+  ytem = yr[-1]
+  y <- lag0(maxlag , ytem) %>% scale() %>% as.numeric()# dependent variable (3-224=222), done
+  #y.lags <- lags(maxlag, ytem)
+  xtem = data[-1,]
+  xtem[ , tcode=="2"] <- apply( data[ , tcode=="2"], 2, diff )
+  colnames(xtem)[tcode=="2"] = 
+    paste0("D.", colnames(xtem)[tcode=="2"])
+  xtem = lags(maxlag , xtem)  # explanatory variables (2-223=222), done
+  x = xtem %>% scale()
+  # train
+  l = ceiling(dim(x)[1]*0.8)
+  x.train = x[1:l,] 
+  x.test = x[(l+1):dim(x)[1] , ]
+  y.train = y[1:l]
+  y.test = y[(l+1):length(y)]
+  p.train = dim(x.train)[2]
+  n.train = dim(x.train)[1]
+  lambda.train = sqrt(log( p.train ) / n.train )
+  # fit model, collect data
+  lasso = glmnet(x.train, y.train, alpha=1, thresh=1E-9, lambda= lambda.seq, maxit = 10^9)
+  fitted = predict(lasso , s=lambda.seq[which.min(abs(lambda.seq-lambda.train))] , newx = x.test)
+  out.mse = mean((y.test-fitted)^2)
+  list = list(lasso=lasso, mse=out.mse, lambda = lambda.train)
+  return(list)
+}
+
+ng2train <- function(data, yr, tcode){
+  # create data
+  i0 = data[-(1:2) , tcode=="0"]
+  di1 = apply(data[,tcode=="1"], 2, diff)
+  di1 = di1[-1,]
+  colnames(di1) = paste0("D.", colnames(di1))
+  di2 = apply(data[,tcode=="2"], 2, diff)
+  d2i2 = apply(di2, 2, diff)
+  colnames(d2i2) = paste0("D2.", colnames(d2i2))
+  x = cbind(i0, di1, d2i2)
+  x = lags(maxlag , x) %>% scale() # x lost 2 obs
+  ytem = yr[-(1:2)]
+  y = lag0(maxlag, ytem) %>% scale()
+  # train
+  l = ceiling(dim(x)[1]*0.8)
+  x.train = x[1:l,] 
+  x.test = x[(l+1):dim(x)[1] , ]
+  y.train = y[1:l]
+  y.test = y[(l+1):length(y)]
+  p.train = dim(x.train)[2]
+  n.train = dim(x.train)[1]
+  lambda.train = sqrt(log( p.train ) / n.train )
+  # fit model, collect data
+  lasso = glmnet(x.train, y.train, alpha=1, thresh=1E-9, lambda= lambda.seq, maxit = 10^9)
+  fitted = predict(lasso , s=lambda.seq[which.min(abs(lambda.seq-lambda.train))] , newx = x.test)
+  out.mse = mean((y.test-fitted)^2)
+  list = list(lasso=lasso, mse=out.mse, lambda = lambda.train)
+  return(list)
+}
+
+
+ng3train <- function(data, tcode, yr){
+  # create data
+  ytem = yr[-(1:2)] %>% scale()
+  y = lag0(maxlag, ytem) 
+  y.lags = lags(maxlag, ytem)
+  i0 = data[ , tcode=="0"] # *
+  i1 = data[,tcode=="1"] # *
+  i2 = data[,tcode=="2"]
+  di1 = apply(i1, 2, diff) # *
+  di2 = apply(i2, 2, diff) # *
+  d2i2 = apply(di2, 2, diff) # *
+  colnames(di1) = paste0("D.", colnames(di1))
+  colnames(di2) = paste0("D.", colnames(di2))
+  colnames(d2i2) = paste0("D2.", colnames(d2i2))
+  xtem = cbind(i0[-(1:2),] , di1[-1,] , d2i2)
+  xtem = lags(maxlag, xtem)
+  xtem2 = cbind( i1[-(1:2),] , di2[-1,])
+  xtem2 = lag1(maxlag, xtem2)
+  x = cbind(xtem, xtem2, y.lags) %>% scale()
+  # train
+  l = ceiling(dim(x)[1]*0.8)
+  x.train = x[1:l,] 
+  x.test = x[(l+1):dim(x)[1] , ]
+  y.train = y[1:l]
+  y.test = y[(l+1):length(y)]
+  p.train = dim(x.train)[2]
+  n.train = dim(x.train)[1]
+  lambda.train = sqrt(log( p.train ) / n.train )
+  # fit model, collect data
+  lasso = glmnet(x.train, y.train, alpha=1, thresh=1E-9, lambda= lambda.seq, maxit = 10^9)
+  fitted = predict(lasso , s=lambda.seq[which.min(abs(lambda.seq-lambda.train))] , newx = x.test)
+  out.mse = mean((y.test-fitted)^2)
+  list = list(lasso=lasso, mse=out.mse, lambda = lambda.train)
+  return(list)
+}
+
+
+
 
 
 
@@ -320,7 +324,14 @@ GDP1train <- function(data, tcode){
   n.train = dim(x.train)[1]
   lambda.train = sqrt(log( p.train ) / n.train )
   # fit model, collect data
-  lasso = glmnet(x.train, y.train, alpha=1, thresh=1E-5, lambda= lambda.seq, maxit = 10^9)
+  lasso.first = glmnet(x.train, y.train, alpha=1, thresh=1E-5, lambda= lambda.seq, maxit = 10^9)
+  # exp 23rd Nov
+  tau=1
+  first.step.coef=coef(lasso.first)[-1]
+  penalty.factor=abs(first.step.coef+1/sqrt(nrow(x.train)))^(-tau)
+  lasso = glmnet(x.train, y.train, alpha=1, thresh=1E-5, lambda= lambda.seq, 
+                       maxit = 10^9, penalty.factor=penalty.factor)
+  ## exp 23rd Nov
   fitted = predict(lasso , s=lambda.seq[which.min(abs(lambda.seq-lambda.train))] , newx = x.test)
   out.mse = mean((y.test-fitted)^2)
   list = list(lasso=lasso, mse=out.mse, lambda = lambda.train)
@@ -596,7 +607,25 @@ inf3.2train <- function(data, tcode){
 
 
 
-
+trace.interest <- function(model, lambda.seq) {
+  plot.lasso <- rbind(lambda.seq, coef(model)[-1,]) %>% t() %>%
+    as.matrix() %>% as.data.frame(stringsAsFactors = F)
+  colnames(plot.lasso)[1] <- "lambda"
+  plot.lasso <- plot.lasso[, substr(colnames(plot.lasso), 1,
+                                    nchar(colnames(plot.lasso))-5) == "TB-3Mth" |
+                             substr(colnames(plot.lasso), 1,
+                                    nchar(colnames(plot.lasso))-5) == "Com Paper" | 
+                             colnames(plot.lasso)=="lambda"]
+  melt.lasso <- melt(plot.lasso, id = "lambda")
+  plot <- ggplot(melt.lasso, aes(x= lambda, y= value, color= variable))+
+    geom_line() + theme(legend.position = "none") +
+    labs(x='lambda', y='coefficients') + 
+    ggtitle("Trace plot of two interest rates") + 
+    geom_text(data=subset(melt.lasso, lambda==0),
+                    aes(label= variable, color=variable)) +
+    xlim(0, 0.02)
+  return(plot)
+}
 
 
 
