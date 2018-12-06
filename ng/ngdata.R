@@ -10,6 +10,8 @@ library("tseries")
 library("urca")
 source("/Users/stanza/documents/github/lasso/fun.R")
 
+
+
 maxlag = 4
 ngraw <- read.csv("/Users/stanza/documents/github/lasso/ng/ngraw.csv")  
 tcode <- read.csv("/Users/stanza/documents/github/lasso/ng/tcode.csv") 
@@ -31,7 +33,9 @@ yr2 = ydata$yr2
 yr3 = ydata$yr3
 yr4 = ydata$yr4
 yr5 = ydata$yr5
-ngraw = ngraw[1:dim(ydata)[1] , ]
+### ngraw data is from 1960.1 - 2007.12
+### ydata(return) is from 1964.1 - 2003.12
+ngraw = ngraw[49:(dim(ydata)[1]+48) , ]
 ngraw[, tcode==4 | tcode==5 | tcode==6] = log(ngraw[, tcode==4 | tcode==5 | tcode==6])
 # keep full set of data before remove "spread"
 full.raw <- ngraw
@@ -108,9 +112,6 @@ tt$AIC[tt$AIC=="I(0)"] <- "I(1)"
 tt$BIC[tt$BIC=="I(0)"] <- "I(1)"
 aabbss[inves.tcode2==6,] = tt
 #saveRDS(aabbss, file = "/Users/stanza/documents/github/lasso/ng/compare.rds")
-maxlag = 4
-lambda.seq <- seq(0.5, 0, -0.0025)
-lambda.seq.fd <- seq(0.2, 0, -0.001)
 save.image(file = "/Users/stanza/documents/github/lasso/ng/ngdata.RData")
 
 

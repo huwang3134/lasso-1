@@ -31,9 +31,10 @@ load("/Users/stanza/documents/github/lasso/sab_gdp.RData")
 t.inf = t.sw
 t.inf[short=="CPI"] = "1"
 Inflation = diff(bpraw$CPI) %>% as.data.frame()
-time = 1:dim(Inflation)[1]
 l = ceiling(dim(Inflation)[1]*0.8)
-ggplot(data=Inflation, aes(x=time, y=.)) + geom_line() + geom_vline(xintercept=l, color="red")
+xx = as.yearqtr(1959 + seq(1, 223)/4) 
+ggplot(data=Inflation, aes(x=xx, y=.)) + geom_line() + geom_vline(xintercept=xx[l], color="red")+
+  xlab("time") + ylab("Inflation rate") + scale_x_continuous(breaks = seq(1959, 2014, by=5))
 ```
 
 # Inflation as I(0)
@@ -136,11 +137,12 @@ rbind(adf.auto(Inflation, criteria = "AIC"), adf.auto(Inflation, criteria = "BIC
 # Inflation as I(1)
 
 ```{r include=T, message=F, warning=F, echo=F}
-D.Inflation = diff(Inflation) %>% as.data.frame()
+D.Inflation = diff(diff(bpraw$CPI)) %>% as.data.frame()
 #ar(D.Inflation, order.max = 1)
-time = 1:dim(D.Inflation)[1]
 l = ceiling(dim(D.Inflation)[1]*0.8)
-ggplot(data=D.Inflation, aes(x=time, y=.)) + geom_line() + geom_vline(xintercept=l, color="red")
+xx = as.yearqtr(1959 + seq(2, 223)/4) 
+ggplot(data=D.Inflation, aes(x=xx, y=.)) + geom_line() + geom_vline(xintercept=xx[l], color="red") +
+  xlab("time") + ylab("Differenced Inflation") + scale_x_continuous(breaks = seq(1959, 2014, by=5))
 ```
 
 ```{r include=T, message=F, warning=F, echo=F}

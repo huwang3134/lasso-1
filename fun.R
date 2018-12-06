@@ -13,7 +13,15 @@ lags <- function(maxlag, x){
      names(xtem) = nn
     lagged.x = do.call(cbind, xtem)
    }
-  else {
+  else if(dim(x)[2]==1) {
+    for (i in 1:maxlag) {
+      x.lag = x[((maxlag + 1 - i) : (length(x) - i))]
+      xtem[[i]] = x.lag
+      nn[i] = paste0( deparse(substitute(x)) , ".lag", i)
+    }
+    names(xtem) = nn
+    lagged.x = do.call(cbind, xtem)
+  } else {
     for (i in 1:maxlag) {
       x.lag = x[((maxlag + 1 - i) : (dim(x)[1] - i)) , ]
       colnames(x.lag) = paste0( colnames(x.lag) , ".lag", i)
@@ -30,7 +38,10 @@ lag0 <- function(maxlag, y){
     yt = y[((maxlag + 1) : length(y))]
     names(yt) = paste0( deparse(substitute(y)) )
   }
-  else {
+  else if (dim(y)[2]==1) {
+    yt = y[((maxlag + 1) : length(y))]
+    names(yt) = paste0( deparse(substitute(y)) )
+  } else {
     yt = y[((maxlag + 1) : (dim(y)[1])) , ]
     colnames(yt) = colnames(y)
   }
@@ -203,15 +214,15 @@ sumtable <- function(t1, t2, t3){# t1, t2, t3 are the outputs from trace functio
 
 
 ng1train <- function(data,  yr, tcode){
-  ytem = yr[-1]
-  y <- lag0(maxlag , ytem) %>% scale() %>% as.numeric()# dependent variable (3-224=222), done
-  #y.lags <- lags(maxlag, ytem)
+  yr = yr[-1] %>% scale()
+  y <- lag0(maxlag , yr) %>% as.numeric()# dependent variable (3-224=222), done
+  y.lags <- lags(maxlag, yr)
   xtem = data[-1,]
   xtem[ , tcode=="2"] <- apply( data[ , tcode=="2"], 2, diff )
   colnames(xtem)[tcode=="2"] = 
     paste0("D.", colnames(xtem)[tcode=="2"])
-  xtem = lags(maxlag , xtem)  # explanatory variables (2-223=222), done
-  x = xtem %>% scale()
+  xtem = lags(maxlag , xtem) %>% scale() 
+  x = cbind(xtem, y.lags)  # explanatory variables (2-223=222), done
   # train
   l = ceiling(dim(x)[1]*0.8)
   x.train = x[1:l,] 
@@ -222,7 +233,7 @@ ng1train <- function(data,  yr, tcode){
   n.train = dim(x.train)[1]
   lambda.train = sqrt(log( p.train ) / n.train )
   # fit model, collect data
-  lasso = glmnet(x.train, y.train, alpha=1, thresh=1E-9, lambda= lambda.seq, maxit = 10^9)
+  lasso = glmnet(x.train, y.train, alpha=1, thresh=1E-7, lambda= lambda.seq, maxit = 10^9)
   fitted = predict(lasso , s=lambda.seq[which.min(abs(lambda.seq-lambda.train))] , newx = x.test)
   out.mse = mean((y.test-fitted)^2)
   list = list(lasso=lasso, mse=out.mse, lambda = lambda.train)
@@ -238,10 +249,12 @@ ng2train <- function(data, yr, tcode){
   di2 = apply(data[,tcode=="2"], 2, diff)
   d2i2 = apply(di2, 2, diff)
   colnames(d2i2) = paste0("D2.", colnames(d2i2))
-  x = cbind(i0, di1, d2i2)
-  x = lags(maxlag , x) %>% scale() # x lost 2 obs
-  ytem = yr[-(1:2)]
-  y = lag0(maxlag, ytem) %>% scale()
+  xtem = cbind(i0, di1, d2i2) %>% scale()
+  yr = yr[-(1:2)] %>% scale()
+  y.lags <- lags(maxlag, yr)
+  y = lag0(maxlag, yr) %>% as.numeric()
+  xtem = lags(maxlag , xtem)  # x lost 2 obs
+  x = cbind(y.lags, xtem)
   # train
   l = ceiling(dim(x)[1]*0.8)
   x.train = x[1:l,] 
@@ -252,7 +265,7 @@ ng2train <- function(data, yr, tcode){
   n.train = dim(x.train)[1]
   lambda.train = sqrt(log( p.train ) / n.train )
   # fit model, collect data
-  lasso = glmnet(x.train, y.train, alpha=1, thresh=1E-9, lambda= lambda.seq, maxit = 10^9)
+  lasso = glmnet(x.train, y.train, alpha=1, thresh=1E-7, lambda= lambda.seq, maxit = 10^9)
   fitted = predict(lasso , s=lambda.seq[which.min(abs(lambda.seq-lambda.train))] , newx = x.test)
   out.mse = mean((y.test-fitted)^2)
   list = list(lasso=lasso, mse=out.mse, lambda = lambda.train)
@@ -262,9 +275,9 @@ ng2train <- function(data, yr, tcode){
 
 ng3train <- function(data, tcode, yr){
   # create data
-  ytem = yr[-(1:2)] %>% scale()
-  y = lag0(maxlag, ytem) 
-  y.lags = lags(maxlag, ytem)
+  yr = yr[-(1:2)] %>% scale() %>% as.matrix()
+  y = lag0(maxlag, yr) 
+  y.lags = lags(maxlag, yr)
   i0 = data[ , tcode=="0"] # *
   i1 = data[,tcode=="1"] # *
   i2 = data[,tcode=="2"]
@@ -274,11 +287,12 @@ ng3train <- function(data, tcode, yr){
   colnames(di1) = paste0("D.", colnames(di1))
   colnames(di2) = paste0("D.", colnames(di2))
   colnames(d2i2) = paste0("D2.", colnames(d2i2))
-  xtem = cbind(i0[-(1:2),] , di1[-1,] , d2i2)
+  xtem = cbind(i0[-(1:2),] , di1[-1,] , d2i2) %>% scale()
   xtem = lags(maxlag, xtem)
-  xtem2 = cbind( i1[-(1:2),] , di2[-1,])
+  xtem2 = cbind( i1[-(1:2),] , di2[-1,]) %>% scale()
   xtem2 = lag1(maxlag, xtem2)
-  x = cbind(xtem, xtem2, y.lags) %>% scale()
+  x = cbind(xtem, xtem2, y.lags)
+  #x = cbind(xtem, xtem2) %>% scale()
   # train
   l = ceiling(dim(x)[1]*0.8)
   x.train = x[1:l,] 
@@ -289,16 +303,12 @@ ng3train <- function(data, tcode, yr){
   n.train = dim(x.train)[1]
   lambda.train = sqrt(log( p.train ) / n.train )
   # fit model, collect data
-  lasso = glmnet(x.train, y.train, alpha=1, thresh=1E-9, lambda= lambda.seq, maxit = 10^9)
+  lasso = glmnet(x.train, y.train, alpha=1, thresh=1E-7, lambda= lambda.seq, maxit = 10^9)
   fitted = predict(lasso , s=lambda.seq[which.min(abs(lambda.seq-lambda.train))] , newx = x.test)
   out.mse = mean((y.test-fitted)^2)
   list = list(lasso=lasso, mse=out.mse, lambda = lambda.train)
   return(list)
 }
-
-
-
-
 
 
 

@@ -5,35 +5,9 @@ date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output: pdf_document
 ---
 
-```{r, include=T, echo=F, warning=F, 	message = FALSE}
-library("glmnet")
-library("reshape2")
-library("cellranger")
-library("tidyverse")
-library("knitr")
-library("ggrepel")
-library("pander")
-library("kableExtra")
-library("tseries")
-library("urca")
-source("/Users/stanza/documents/github/lasso/fun.R")
-load("/Users/stanza/documents/github/lasso/ng/ngdata.RData")
-
-
-time = 1:dim(ydata)[1]
-l = ceiling(dim(ydata)[1]*0.8)
-ggplot(data=ydata, aes(x=time, y=yr2)) + geom_line() + geom_vline(xintercept=l, color="red")
-
-aic.trend = adf.auto(as.data.frame(ydata[,-5]), criteria = "AIC")
-bic.trend = adf.auto(as.data.frame(ydata[,-5]), criteria = "BIC")
-aic.drift = adf.drift(as.data.frame(ydata[,-5]), criteria = "AIC")
-bic.drift = adf.drift(as.data.frame(ydata[,-5]), criteria = "BIC")
-adftests = rbind(cbind(aic.trend, bic.trend), cbind(aic.drift, bic.drift)) 
-```
-
 # Data
 
-Data: 131-8=123 series in total, 480 observations.
+Data: 131-8=123 series in total, 480 observations, from Jan 1964 to Dec 2003.
 
 The "spread" series (difference between two I(1) series) are removed.
 
@@ -55,53 +29,6 @@ y_t &= I(0)_{t-1} +  I(0)_{t-2}
 +  \Delta I(2)_{t-3} +  \Delta I(2)_{t-4}
 \end{split} 
 $$
-
-```{r include=T, message=F, warning=F, echo=F}
-train1.ng = ng1train(data = ngraw, tcode = t.ng, yr=yr2)
-train1.aic = ng1train(data = ngraw, tcode = t.aic, yr=yr2)
-train1.bic = ng1train(data = ngraw, tcode = t.bic, yr=yr2)
-trace1.ng = trace.plot.table(train1.ng$lasso, lambda.seq, train1.ng$lambda)
-trace1.aic = trace.plot.table(train1.aic$lasso, lambda.seq, train1.aic$lambda)
-trace1.bic = trace.plot.table(train1.bic$lasso, lambda.seq, train1.bic$lambda)
-sum1 = sumtable(trace1.ng, trace1.aic, trace1.bic)
-mses1 = c("out-of sample MSE", round(train1.ng$mse, digits = 6), 
-         round(train1.aic$mse, digits = 6), round(train1.bic$mse, digits = 6))
-sum1 = rbind(mses1, sum1)
-MSE1 = c(train1.ng$mse, train1.aic$mse, train1.bic$mse)
-write.csv(sum1, "/Users/stanza/documents/github/lasso/ng/lasso1.csv")
-```
-
-```{r eval=F, include=F, message=F, warning=F, echo=F}
-# detrend y data
-lasso1.ng.dt = lasso111ng(data = ngraw, tcode = t.ng, yr = dt.yr2)
-trace1.ng.dt = trace.plot.table(lasso1.ng.dt$lasso, lambda.seq, lasso1.ng.dt$lambda)
-lasso1.aic.dt = lasso111ng(data = ngraw, tcode = t.aic, yr = dt.yr2)
-trace1.aic.dt = trace.plot.table(lasso1.aic.dt$lasso, lambda.seq, lasso1.aic.dt$lambda)
-lasso1.bic.dt = lasso111ng(data = ngraw, tcode = t.bic, yr = dt.yr2)
-trace1.bic.dt = trace.plot.table(lasso1.bic.dt$lasso, lambda.seq, lasso1.bic.dt$lambda)
-
-sum1.dt = sumtable(trace1.ng.dt, trace1.aic.dt, trace1.bic.dt)
-#sum1.dt = cbind(I1=c("BIC", "BIC", "ALL", "ALL", "AIC, BIC", "ALL", "ALL", "AIC, BIC"), sum1.dt)
-colnames(sum1.dt) = c("", "NG", "AIC", "BIC")
-#pander(sum1.dt, caption = "Lasso 1, non-zero coefficients, detrended y series")
-write.csv(sum1.dt, "/Users/stanza/documents/github/lasso/ng/lasso1_dt.csv")
-```
-
-```{r eval=F, include=F, message=F, warning=F, echo=F}
-# first-differenced y data
-lasso1.ng.fd = lasso111ng(data = ngraw[-1,], tcode = t.ng, yr=fd.yr2)
-trace1.ng.fd = trace.plot.table(lasso1.ng.fd$lasso, lambda.seq.fd, lasso1.ng.fd$lambda)
-lasso1.aic.fd = lasso111ng(data = ngraw[-1,], tcode = t.aic, yr=fd.yr2)
-trace1.aic.fd = trace.plot.table(lasso1.aic.fd$lasso, lambda.seq.fd, lasso1.aic.fd$lambda)
-lasso1.bic.fd = lasso111ng(data = ngraw[-1,], tcode = t.bic, yr=fd.yr2)
-trace1.bic.fd = trace.plot.table(lasso1.bic.fd$lasso, lambda.seq.fd, lasso1.bic.fd$lambda)
-
-sum1.fd = sumtable(trace1.ng.fd, trace1.aic.fd, trace1.bic.fd)
-colnames(sum1.fd) = c("", "NG", "AIC", "BIC")
-#pander(sum1.fd, caption = "Lasso 1, non-zero coefficients, detrended y series")
-write.csv(sum1.fd, "/Users/stanza/documents/github/lasso/ng/lasso1_fd.csv")
-```
-
 # Lasso 2
 
 All stationary.
@@ -116,51 +43,6 @@ y_t &= I(0)_{t-1} +  I(0)_{t-2}
 +  \Delta^2 I(2)_{t-3} +  \Delta^2 I(2)_{t-4}
 \end{split} 
 $$
-
-
-```{r include=T, message=F, warning=F, echo=F}
-train2.ng = ng2train(data = ngraw, tcode = t.ng, yr=yr2)
-train2.aic = ng2train(data = ngraw, tcode = t.aic, yr=yr2)
-train2.bic = ng2train(data = ngraw, tcode = t.bic, yr=yr2)
-trace2.ng = trace.plot.table(train2.ng$lasso, lambda.seq, train2.ng$lambda)
-trace2.aic = trace.plot.table(train2.aic$lasso, lambda.seq, train2.aic$lambda)
-trace2.bic = trace.plot.table(train2.bic$lasso, lambda.seq, train2.bic$lambda)
-sum2 = sumtable(trace2.ng, trace2.aic, trace2.bic)
-mses2 = c("out-of sample MSE", round(train2.ng$mse, digits = 6), 
-         round(train2.aic$mse, digits = 6), round(train2.bic$mse, digits = 6))
-sum2 = rbind(mses2, sum2)
-MSE2 = c(train2.ng$mse, train2.aic$mse, train2.bic$mse)
-write.csv(sum2, "/Users/stanza/documents/github/lasso/ng/lasso2.csv")
-```
-
-```{r eval=F, include=F, message=F, warning=F, echo=F}
-# detrend y data
-lasso2.ng.dt = lasso222ng(data = ngraw, tcode = t.ng, yr=dt.yr2)
-trace2.ng.dt = trace.plot.table(lasso2.ng.dt$lasso, lambda.seq, lasso2.ng.dt$lambda)
-lasso2.aic.dt = lasso222ng(data = ngraw, tcode = t.aic, yr=dt.yr2)
-trace2.aic.dt = trace.plot.table(lasso2.aic.dt$lasso, lambda.seq, lasso2.aic.dt$lambda)
-lasso2.bic.dt = lasso222ng(data = ngraw, tcode = t.bic, yr=dt.yr2)
-trace2.bic.dt = trace.plot.table(lasso2.bic.dt$lasso, lambda.seq, lasso2.bic.dt$lambda)
-sum2.dt = sumtable(trace2.ng.dt, trace2.aic.dt, trace2.bic.dt)
-colnames(sum2.dt) = c("", "NG", "AIC", "BIC")
-#pander(sum2.dt, caption = "Lasso 2, non-zero coefficients, detrended y series")
-write.csv(sum2.dt, "/Users/stanza/documents/github/lasso/ng/lasso2_dt.csv")
-```
-
-```{r eval=F, include=F, message=F, warning=F, echo=F}
-# first-differenced y data
-lasso2.ng.fd = lasso222ng(data = ngraw[-1,], tcode = t.ng, yr=fd.yr2)
-trace2.ng.fd = trace.plot.table(lasso2.ng.fd$lasso, lambda.seq.fd, lasso2.ng.fd$lambda)
-lasso2.aic.fd = lasso222ng(data = ngraw[-1,], tcode = t.aic, yr=fd.yr2)
-trace2.aic.fd = trace.plot.table(lasso2.aic.fd$lasso, lambda.seq.fd, lasso2.aic.fd$lambda)
-lasso2.bic.fd = lasso222ng(data = ngraw[-1,], tcode = t.bic, yr=fd.yr2)
-trace2.bic.fd = trace.plot.table(lasso2.bic.fd$lasso, lambda.seq.fd, lasso2.bic.fd$lambda)
-sum2.fd = sumtable(trace2.ng.fd, trace2.aic.fd, trace2.bic.fd)
-colnames(sum2.fd) = c("", "NG", "AIC", "BIC")
-#pander(sum2.fd, caption = "Lasso 2, non-zero coefficients, detrended y series")
-write.csv(sum2.fd, "/Users/stanza/documents/github/lasso/ng/lasso2_fd.csv")
-```
-
 # Lasso 3
 
 Combination of Lasso 1 and 2.
@@ -177,77 +59,118 @@ y_t &=I(0)_{t-1} +  I(0)_{t-2}
 \end{split} 
 $$
 
+```{r, include=T, echo=F, warning=F, 	message = FALSE}
+library("glmnet")
+library("reshape2")
+library("cellranger")
+library("tidyverse")
+library("knitr")
+library("ggrepel")
+library("pander")
+library("kableExtra")
+library("tseries")
+library("urca")
+library("lmtest")
+library("zoo")
+load("/Users/stanza/documents/github/lasso/ng/ngdata.RData")
+source("/Users/stanza/documents/github/lasso/fun.R")
+### ng raw data was from 1960.1 - 2007.12 (now truncated to 1964.1-2003.12)
+### ydata (return) is from 1964.1 - 2003.12
+maxlag = 25
+
+lambda.seq <- seq(0.5, 0, -0.0025)
+lambda.seq.fd <- seq(0.2, 0, -0.001)
+
+xx = as.yearmon(1964 + seq(0, 479)/12) 
+l = ceiling(dim(ydata)[1]*0.8)
+ggplot(data=ydata, aes(x=xx, y=yr2)) + geom_line() + geom_vline(xintercept=xx[l], color="red") +
+  scale_x_continuous(breaks = seq(1964, 2003, by=3)) +
+  xlab("Year") + ylab("Excess Bond Return (yr2)")
+
+aic.trend = adf.auto(as.data.frame(ydata[,-5]), criteria = "AIC")
+bic.trend = adf.auto(as.data.frame(ydata[,-5]), criteria = "BIC")
+aic.drift = adf.drift(as.data.frame(ydata[,-5]), criteria = "AIC")
+bic.drift = adf.drift(as.data.frame(ydata[,-5]), criteria = "BIC")
+adftests = rbind(cbind(aic.trend, bic.trend), cbind(aic.drift, bic.drift)) 
+```
+
 ```{r include=T, message=F, warning=F, echo=F}
-train3.ng = ng3train(data = ngraw, tcode = t.ng, yr=yr2)
-train3.aic = ng3train(data = ngraw, tcode = t.aic, yr=yr2)
-train3.bic = ng3train(data = ngraw, tcode = t.bic, yr=yr2)
-trace3.ng = trace.plot.table(train3.ng$lasso, lambda.seq, train3.ng$lambda)
-trace3.aic = trace.plot.table(train3.aic$lasso, lambda.seq, train3.aic$lambda)
-trace3.bic = trace.plot.table(train3.bic$lasso, lambda.seq, train3.bic$lambda)
-sum3 = sumtable(trace3.ng, trace3.aic, trace3.bic)
-mses3 = c("out-of sample MSE", round(train3.ng$mse, digits = 6), 
-         round(train3.aic$mse, digits = 6), round(train3.bic$mse, digits = 6))
-sum3 = rbind(mses3, sum3)
-MSE3 = c(train3.ng$mse, train3.aic$mse, train3.bic$mse)
-write.csv(sum3, "/Users/stanza/documents/github/lasso/ng/lasso3.csv")
-mses = rbind(MSE1, MSE2, MSE3)
-colnames(mses) = c("NG", "AIC", "BIC")
-rownames(mses) = c("LASSO 1", "LASSO 2", "LASSO 3")
+sum.total = rep(NA, 4)
+mses = list()
+for (i in 2:5) {
+  yr = ydata[,(i-1)] %>% unlist()
+  train1.ng = ng1train(data = ngraw, tcode = t.ng, yr=yr)
+  train1.aic = ng1train(data = ngraw, tcode = t.aic, yr=yr)
+  train1.bic = ng1train(data = ngraw, tcode = t.bic, yr=yr)
+  trace1.ng = trace.plot.table(train1.ng$lasso, lambda.seq, train1.ng$lambda)
+  trace1.aic = trace.plot.table(train1.aic$lasso, lambda.seq, train1.aic$lambda)
+  trace1.bic = trace.plot.table(train1.bic$lasso, lambda.seq, train1.bic$lambda)
+  sum1 = sumtable(trace1.ng, trace1.aic, trace1.bic)
+  title1 = c("LASSO 1", rep(paste0("yr",i),3))
+  sum1 = rbind(title1, sum1)
+  MSE1 = c(train1.ng$mse, train1.aic$mse, train1.bic$mse)
+  train2.ng = ng2train(data = ngraw, tcode = t.ng, yr=yr)
+  train2.aic = ng2train(data = ngraw, tcode = t.aic, yr=yr)
+  train2.bic = ng2train(data = ngraw, tcode = t.bic, yr=yr)
+  trace2.ng = trace.plot.table(train2.ng$lasso, lambda.seq, train2.ng$lambda)
+  trace2.aic = trace.plot.table(train2.aic$lasso, lambda.seq, train2.aic$lambda)
+  trace2.bic = trace.plot.table(train2.bic$lasso, lambda.seq, train2.bic$lambda)
+  sum2 = sumtable(trace2.ng, trace2.aic, trace2.bic)
+  title2 = c("LASSO 2", rep(paste0("yr",i),3))
+  sum2 = rbind(title2, sum2)
+  MSE2 = c(train2.ng$mse, train2.aic$mse, train2.bic$mse)
+  train3.ng = ng3train(data = ngraw, tcode = t.ng, yr=yr)
+  train3.aic = ng3train(data = ngraw, tcode = t.aic, yr=yr)
+  train3.bic = ng3train(data = ngraw, tcode = t.bic, yr=yr)
+  trace3.ng = trace.plot.table(train3.ng$lasso, lambda.seq, train3.ng$lambda)
+  trace3.aic = trace.plot.table(train3.aic$lasso, lambda.seq, train3.aic$lambda)
+  trace3.bic = trace.plot.table(train3.bic$lasso, lambda.seq, train3.bic$lambda)
+  sum3 = sumtable(trace3.ng, trace3.aic, trace3.bic)
+  title3 = c("LASSO 3", rep(paste0("yr",i),3))
+  sum3 = rbind(title3, sum3)
+  MSE3 = c(train3.ng$mse, train3.aic$mse, train3.bic$mse)
+  sum.total = rbind(sum.total, sum1, sum2, sum3)
+  mses = rbind(mses, MSE1, MSE2, MSE3)
+}
+write.csv(sum.total, paste0("/Users/stanza/documents/github/lasso/ng/yr2345.csv"))
+write.csv(mses, paste0("/Users/stanza/documents/github/lasso/ng/mse_yr.csv"))
 ```
 
-# yr2 as the dependent variable
 
-* AIC chooses 13 lags for yr2.
-
-* The out-of-sample MSE of AR(13) is 0.091.
-
-* The estimated AR(1) coefficient is 0.9308.
 
 ```{r include=T, message=F, warning=F, echo=F}
-pander(mses, caption = "out-of-sample MSE of LASSO, when the dependent variable is YR2")
-maxlag.ar = 13
-y = lag0(maxlag = maxlag.ar, yr2) %>% scale()
-x = lags(maxlag = maxlag.ar, yr2) 
-l = ceiling(length(y)*0.8)
-y.train = y[1:l]
-y.test = y[(l+1):length(y)]
-x.train = x[1:l, ] 
-x.test = x[(l+1):dim(x)[1], ]
-arols = lm(y.train ~ x.train)
-cf = as.data.frame(lapply(arols$coefficients[-1], rep, dim(x.test)[1]))
-fit.temp = cf * x.test
-fit.ar = rowSums(fit.temp)
-out.mse.ar = mean((y.test-fit.ar)^2)
-#out.mse.ar
+p = vector(length = 4)
+mse = vector(length = 4)
+ar.list = as.data.frame(matrix(NA, ncol =8, nrow = 25))
+for (i in 2:5) {
+  yr = ydata[, (i-1)] %>% scale()
+  p[i-1] = ar(yr, aic=TRUE)$order
+  y = lag0(maxlag = p[i-1], yr) 
+  x = lags(maxlag = p[i-1], yr) 
+  l = ceiling(length(y)*0.8)
+  y.train = y[1:l]
+  y.test = y[(l+1):length(y)]
+  x.train = x[1:l, ] 
+  x.test = x[(l+1):dim(x)[1], ] %>% as.data.frame()
+  arols = lm(y.train ~ x.train)
+  cf = as.data.frame(lapply(arols$coefficients, rep, dim(x.test)[1])) # generate coef matrix
+  fit.temp = cf[,-1] * x.test 
+  fit.ar = rowSums(fit.temp) + cf[,1]
+  out.mse.ar = mean((y.test-fit.ar)^2)
+  mse[i-1] = out.mse.ar
+  ar.info = arima(yr, order=c(25,0,0)) %>% coeftest()
+  ar.info = ar.info[-26,c(1,4)] %>% round(digits = 4)
+  ar.list[, (2*i-3):(2*i-2)] = ar.info
+}
+colnames(ar.list) = rep(c("Coefficients", "P-value"), 4)
+rownames(ar.list) = paste0("ar", 1:25)
+write.csv(ar.list, paste0("/Users/stanza/documents/github/lasso/ng/ar.csv"))
+ar.table = cbind(p, mse)
+colnames(ar.table) = c("Lags chosen by AIC", "M.S.E")
+rownames(ar.table) = paste0("yr", 2:5)
+pander(ar.table, caption = "AR")
 ```
 
-```{r eval=F, include=F, message=F, warning=F, echo=F}
-# detrend y data
-lasso3.ng.dt = lasso333ng(data = ngraw, tcode = t.ng, yr=dt.yr3)
-trace3.ng.dt = trace.plot.table(lasso3.ng.dt$lasso, lambda.seq, lasso3.ng.dt$lambda)
-lasso3.aic.dt = lasso333ng(data = ngraw, tcode = t.aic, yr=dt.yr3)
-trace3.aic.dt = trace.plot.table(lasso3.aic.dt$lasso, lambda.seq, lasso3.aic.dt$lambda)
-lasso3.bic.dt = lasso333ng(data = ngraw, tcode = t.bic, yr=dt.yr3)
-trace3.bic.dt = trace.plot.table(lasso3.bic.dt$lasso, lambda.seq, lasso3.bic.dt$lambda)
-sum3.dt = sumtable(trace3.ng.dt, trace3.aic.dt, trace3.bic.dt)
-colnames(sum3.dt) = c("", "NG", "AIC", "BIC")
-#pander(sum3.dt, caption = "Lasso 3, non-zero coefficients, detrended y series")
-write.csv(sum3.dt, "/Users/stanza/documents/github/lasso/ng/lasso3_dt.csv")
-```
-
-```{r eval=F, include=F, message=F, warning=F, echo=F}
-# first-differenced y data
-lasso3.ng.fd = lasso333ng(data = ngraw[-1,], tcode = t.ng, yr=fd.yr2)
-trace3.ng.fd = trace.plot.table(lasso3.ng.fd$lasso, lambda.seq.fd, lasso3.ng.fd$lambda)
-lasso3.aic.fd = lasso333ng(data = ngraw[-1,], tcode = t.aic, yr=fd.yr2)
-trace3.aic.fd = trace.plot.table(lasso3.aic.fd$lasso, lambda.seq.fd, lasso3.aic.fd$lambda)
-lasso3.bic.fd = lasso333ng(data = ngraw[-1,], tcode = t.bic, yr=fd.yr2)
-trace3.bic.fd = trace.plot.table(lasso3.bic.fd$lasso, lambda.seq.fd, lasso3.bic.fd$lambda)
-sum3.fd = sumtable(trace3.ng.fd, trace3.aic.fd, trace3.bic.fd)
-colnames(sum3.fd) = c("", "NG", "AIC", "BIC")
-#pander(sum3.fd, caption = "Lasso 3, non-zero coefficients, detrended y series")
-write.csv(sum3.fd, "/Users/stanza/documents/github/lasso/ng/lasso3_fd.csv")
-```
 
 
 ```{r include=F, message=F, warning=F, echo=F, eval=F}
@@ -284,221 +207,6 @@ description = data.frame(`Short description` = c("hsmw",
 #%>% pander(justify = "left" , split.table = Inf , split.cell = 80, style = "grid", caption = "Data description")
 write.csv(description, "description.csv")
 ```
-
-```{r include=F, message=F, warning=F, echo=F, eval=F}
-t.bic[colnames(ngraw) == substr(sum3[1,1], 1, nchar(sum3[1,1])-5)]
-t.bic[colnames(ngraw) == substr(sum3[2,1], 1, nchar(sum3[2,1])-5)]
-t.bic[colnames(ngraw) == substr(sum3[3,1], 3, nchar(sum3[3,1])-5)]
-t.bic[colnames(ngraw) == substr(sum3[4,1], 1, nchar(sum3[4,1])-5)]
-t.bic[colnames(ngraw) == substr(sum3[5,1], 1, nchar(sum3[5,1])-5)]
-t.bic[colnames(ngraw) == substr(sum3[6,1], 1, nchar(sum3[6,1])-5)]
-t.bic[colnames(ngraw) == substr(sum3[7,1], 1, nchar(sum3[7,1])-5)]
-t.bic[colnames(ngraw) == substr(sum3[8,1], 1, nchar(sum3[8,1])-5)]
-t.bic[colnames(ngraw) == substr(sum3[9,1], 1, nchar(sum3[9,1])-5)]
-t.bic[colnames(ngraw) == substr(sum3[10,1], 1, nchar(sum3[10,1])-5)]
-t.bic[colnames(ngraw) == substr(sum3[11,1], 1, nchar(sum3[11,1])-5)]
-```
-
-# yr3 as the dependent variable
-
-* AIC chooses 25 lags for yr3.
-
-* The out-of-sample MSE of AR(25) is 0.077.
-
-* The estimated AR(1) coefficient is 0.934.
-
-```{r include=T, message=F, warning=F, echo=F}
-train1.ng = ng1train(data = ngraw, tcode = t.ng, yr=yr3)
-train1.aic = ng1train(data = ngraw, tcode = t.aic, yr=yr3)
-train1.bic = ng1train(data = ngraw, tcode = t.bic, yr=yr3)
-trace1.ng = trace.plot.table(train1.ng$lasso, lambda.seq, train1.ng$lambda)
-trace1.aic = trace.plot.table(train1.aic$lasso, lambda.seq, train1.aic$lambda)
-trace1.bic = trace.plot.table(train1.bic$lasso, lambda.seq, train1.bic$lambda)
-sum1 = sumtable(trace1.ng, trace1.aic, trace1.bic)
-mses1 = c("out-of sample MSE", round(train1.ng$mse, digits = 6), 
-         round(train1.aic$mse, digits = 6), round(train1.bic$mse, digits = 6))
-sum1 = rbind(mses1, sum1)
-MSE1 = c(train1.ng$mse, train1.aic$mse, train1.bic$mse)
-
-train2.ng = ng2train(data = ngraw, tcode = t.ng, yr=yr3)
-train2.aic = ng2train(data = ngraw, tcode = t.aic, yr=yr3)
-train2.bic = ng2train(data = ngraw, tcode = t.bic, yr=yr3)
-trace2.ng = trace.plot.table(train2.ng$lasso, lambda.seq, train2.ng$lambda)
-trace2.aic = trace.plot.table(train2.aic$lasso, lambda.seq, train2.aic$lambda)
-trace2.bic = trace.plot.table(train2.bic$lasso, lambda.seq, train2.bic$lambda)
-sum2 = sumtable(trace2.ng, trace2.aic, trace2.bic)
-mses2 = c("out-of sample MSE", round(train2.ng$mse, digits = 6), 
-         round(train2.aic$mse, digits = 6), round(train2.bic$mse, digits = 6))
-sum2 = rbind(mses2, sum2)
-MSE2 = c(train2.ng$mse, train2.aic$mse, train2.bic$mse)
-
-train3.ng = ng3train(data = ngraw, tcode = t.ng, yr=yr3)
-train3.aic = ng3train(data = ngraw, tcode = t.aic, yr=yr3)
-train3.bic = ng3train(data = ngraw, tcode = t.bic, yr=yr3)
-trace3.ng = trace.plot.table(train3.ng$lasso, lambda.seq, train3.ng$lambda)
-trace3.aic = trace.plot.table(train3.aic$lasso, lambda.seq, train3.aic$lambda)
-trace3.bic = trace.plot.table(train3.bic$lasso, lambda.seq, train3.bic$lambda)
-sum3 = sumtable(trace3.ng, trace3.aic, trace3.bic)
-mses3 = c("out-of sample MSE", round(train3.ng$mse, digits = 6), 
-         round(train3.aic$mse, digits = 6), round(train3.bic$mse, digits = 6))
-sum3 = rbind(mses3, sum3)
-MSE3 = c(train3.ng$mse, train3.aic$mse, train3.bic$mse)
-mses = rbind(MSE1, MSE2, MSE3)
-colnames(mses) = c("NG", "AIC", "BIC")
-rownames(mses) = c("LASSO 1", "LASSO 2", "LASSO 3")
-pander(mses, caption = "out-of-sample MSE of LASSO, when the dependent variable is yr3")
-# ar
-#ar(yr3, aic=TRUE)
-maxlag.ar = 25
-y = lag0(maxlag = maxlag.ar, yr3) %>% scale()
-x = lags(maxlag = maxlag.ar, yr3) 
-l = ceiling(length(y)*0.8)
-y.train = y[1:l]
-y.test = y[(l+1):length(y)]
-x.train = x[1:l, ] 
-x.test = x[(l+1):dim(x)[1], ]
-arols = lm(y.train ~ x.train)
-cf = as.data.frame(lapply(arols$coefficients[-1], rep, dim(x.test)[1]))
-fit.temp = cf * x.test
-fit.ar = rowSums(fit.temp)
-out.mse.ar = mean((y.test-fit.ar)^2)
-#out.mse.ar
-```
-
-# yr4 as the dependent variable
-
-* AIC chooses 25 lags for yr4.
-
-* The out-of-sample MSE of AR(25) is 0.0735.
-
-* The estimated AR(1) coefficient is 0.9342.
-
-```{r include=T, message=F, warning=F, echo=F}
-train1.ng = ng1train(data = ngraw, tcode = t.ng, yr=yr4)
-train1.aic = ng1train(data = ngraw, tcode = t.aic, yr=yr4)
-train1.bic = ng1train(data = ngraw, tcode = t.bic, yr=yr4)
-trace1.ng = trace.plot.table(train1.ng$lasso, lambda.seq, train1.ng$lambda)
-trace1.aic = trace.plot.table(train1.aic$lasso, lambda.seq, train1.aic$lambda)
-trace1.bic = trace.plot.table(train1.bic$lasso, lambda.seq, train1.bic$lambda)
-sum1 = sumtable(trace1.ng, trace1.aic, trace1.bic)
-mses1 = c("out-of sample MSE", round(train1.ng$mse, digits = 6), 
-         round(train1.aic$mse, digits = 6), round(train1.bic$mse, digits = 6))
-sum1 = rbind(mses1, sum1)
-MSE1 = c(train1.ng$mse, train1.aic$mse, train1.bic$mse)
-
-train2.ng = ng2train(data = ngraw, tcode = t.ng, yr=yr4)
-train2.aic = ng2train(data = ngraw, tcode = t.aic, yr=yr4)
-train2.bic = ng2train(data = ngraw, tcode = t.bic, yr=yr4)
-trace2.ng = trace.plot.table(train2.ng$lasso, lambda.seq, train2.ng$lambda)
-trace2.aic = trace.plot.table(train2.aic$lasso, lambda.seq, train2.aic$lambda)
-trace2.bic = trace.plot.table(train2.bic$lasso, lambda.seq, train2.bic$lambda)
-sum2 = sumtable(trace2.ng, trace2.aic, trace2.bic)
-mses2 = c("out-of sample MSE", round(train2.ng$mse, digits = 6), 
-         round(train2.aic$mse, digits = 6), round(train2.bic$mse, digits = 6))
-sum2 = rbind(mses2, sum2)
-MSE2 = c(train2.ng$mse, train2.aic$mse, train2.bic$mse)
-
-train3.ng = ng3train(data = ngraw, tcode = t.ng, yr=yr4)
-train3.aic = ng3train(data = ngraw, tcode = t.aic, yr=yr4)
-train3.bic = ng3train(data = ngraw, tcode = t.bic, yr=yr4)
-trace3.ng = trace.plot.table(train3.ng$lasso, lambda.seq, train3.ng$lambda)
-trace3.aic = trace.plot.table(train3.aic$lasso, lambda.seq, train3.aic$lambda)
-trace3.bic = trace.plot.table(train3.bic$lasso, lambda.seq, train3.bic$lambda)
-sum3 = sumtable(trace3.ng, trace3.aic, trace3.bic)
-mses3 = c("out-of sample MSE", round(train3.ng$mse, digits = 6), 
-         round(train3.aic$mse, digits = 6), round(train3.bic$mse, digits = 6))
-sum3 = rbind(mses3, sum3)
-MSE3 = c(train3.ng$mse, train3.aic$mse, train3.bic$mse)
-mses = rbind(MSE1, MSE2, MSE3)
-colnames(mses) = c("NG", "AIC", "BIC")
-rownames(mses) = c("LASSO 1", "LASSO 2", "LASSO 3")
-pander(mses, caption = "out-of-sample MSE of LASSO, when the dependent variable is yr4")
-#ar(yr5, aic=TRUE)
-maxlag.ar = 25
-y = lag0(maxlag = maxlag.ar, yr4) %>% scale()
-x = lags(maxlag = maxlag.ar, yr4) 
-l = ceiling(length(y)*0.8)
-y.train = y[1:l]
-y.test = y[(l+1):length(y)]
-x.train = x[1:l, ] 
-x.test = x[(l+1):dim(x)[1], ]
-arols = lm(y.train ~ x.train)
-cf = as.data.frame(lapply(arols$coefficients[-1], rep, dim(x.test)[1]))
-fit.temp = cf * x.test
-fit.ar = rowSums(fit.temp)
-out.mse.ar = mean((y.test-fit.ar)^2)
-#out.mse.ar
-```
-
-
-# yr5 as the dependent variable
-
-* AIC chooses 25 lags for yr5.
-
-* The out-of-sample MSE of AR(25) is 0.066.
-
-* The estimated AR(1) coefficient is 0.9251.
-
-```{r include=T, message=F, warning=F, echo=F}
-train1.ng = ng1train(data = ngraw, tcode = t.ng, yr=yr5)
-train1.aic = ng1train(data = ngraw, tcode = t.aic, yr=yr5)
-train1.bic = ng1train(data = ngraw, tcode = t.bic, yr=yr5)
-trace1.ng = trace.plot.table(train1.ng$lasso, lambda.seq, train1.ng$lambda)
-trace1.aic = trace.plot.table(train1.aic$lasso, lambda.seq, train1.aic$lambda)
-trace1.bic = trace.plot.table(train1.bic$lasso, lambda.seq, train1.bic$lambda)
-sum1 = sumtable(trace1.ng, trace1.aic, trace1.bic)
-mses1 = c("out-of sample MSE", round(train1.ng$mse, digits = 6), 
-         round(train1.aic$mse, digits = 6), round(train1.bic$mse, digits = 6))
-sum1 = rbind(mses1, sum1)
-MSE1 = c(train1.ng$mse, train1.aic$mse, train1.bic$mse)
-
-train2.ng = ng2train(data = ngraw, tcode = t.ng, yr=yr5)
-train2.aic = ng2train(data = ngraw, tcode = t.aic, yr=yr5)
-train2.bic = ng2train(data = ngraw, tcode = t.bic, yr=yr5)
-trace2.ng = trace.plot.table(train2.ng$lasso, lambda.seq, train2.ng$lambda)
-trace2.aic = trace.plot.table(train2.aic$lasso, lambda.seq, train2.aic$lambda)
-trace2.bic = trace.plot.table(train2.bic$lasso, lambda.seq, train2.bic$lambda)
-sum2 = sumtable(trace2.ng, trace2.aic, trace2.bic)
-mses2 = c("out-of sample MSE", round(train2.ng$mse, digits = 6), 
-         round(train2.aic$mse, digits = 6), round(train2.bic$mse, digits = 6))
-sum2 = rbind(mses2, sum2)
-MSE2 = c(train2.ng$mse, train2.aic$mse, train2.bic$mse)
-
-train3.ng = ng3train(data = ngraw, tcode = t.ng, yr=yr5)
-train3.aic = ng3train(data = ngraw, tcode = t.aic, yr=yr5)
-train3.bic = ng3train(data = ngraw, tcode = t.bic, yr=yr5)
-trace3.ng = trace.plot.table(train3.ng$lasso, lambda.seq, train3.ng$lambda)
-trace3.aic = trace.plot.table(train3.aic$lasso, lambda.seq, train3.aic$lambda)
-trace3.bic = trace.plot.table(train3.bic$lasso, lambda.seq, train3.bic$lambda)
-sum3 = sumtable(trace3.ng, trace3.aic, trace3.bic)
-mses3 = c("out-of sample MSE", round(train3.ng$mse, digits = 6), 
-         round(train3.aic$mse, digits = 6), round(train3.bic$mse, digits = 6))
-sum3 = rbind(mses3, sum3)
-MSE3 = c(train3.ng$mse, train3.aic$mse, train3.bic$mse)
-mses = rbind(MSE1, MSE2, MSE3)
-colnames(mses) = c("NG", "AIC", "BIC")
-rownames(mses) = c("LASSO 1", "LASSO 2", "LASSO 3")
-pander(mses, caption = "out-of-sample MSE of LASSO, when the dependent variable is yr5")
-maxlag.ar = 25
-y = lag0(maxlag = maxlag.ar, yr5) %>% scale()
-x = lags(maxlag = maxlag.ar, yr5) 
-l = ceiling(length(y)*0.8)
-y.train = y[1:l]
-y.test = y[(l+1):length(y)]
-x.train = x[1:l, ] 
-x.test = x[(l+1):dim(x)[1], ]
-arols = lm(y.train ~ x.train)
-cf = as.data.frame(lapply(arols$coefficients[-1], rep, dim(x.test)[1]))
-fit.temp = cf * x.test
-fit.ar = rowSums(fit.temp)
-out.mse.ar = mean((y.test-fit.ar)^2)
-#out.mse.ar
-```
-
-
-
-
-
 
 
 
