@@ -20,15 +20,6 @@ short <- read.delim2("/Users/stanza/documents/github/lasso/ng/series.txt", heade
 colnames(ngraw) = str_trim(short$V1)
 ydata <- readxl::read_xls("/Users/stanza/documents/github/lasso/ng/yvar.xls")
 ydata <- select(ydata, yr2, yr3, yr4, yr5)
-ydata = ydata %>% mutate(time=(1:480))
-dt.yr2 = lm(data = ydata, yr2 ~ time)$residuals
-dt.yr3 = lm(data = ydata, yr3 ~ time)$residuals
-dt.yr4 = lm(data = ydata, yr4 ~ time)$residuals
-dt.yr5 = lm(data = ydata, yr5 ~ time)$residuals
-fd.yr2 = diff(ydata$yr2)
-fd.yr3 = diff(ydata$yr3)
-fd.yr4 = diff(ydata$yr4)
-fd.yr5 = diff(ydata$yr5)
 yr2 = ydata$yr2
 yr3 = ydata$yr3
 yr4 = ydata$yr4

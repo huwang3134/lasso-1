@@ -74,7 +74,7 @@ library("lmtest")
 library("zoo")
 load("/Users/stanza/documents/github/lasso/ng/ngdata.RData")
 source("/Users/stanza/documents/github/lasso/fun.R")
-### ng raw data was from 1960.1 - 2007.12 (now truncated to 1964.1-2003.12)
+### ngraw data was from 1960.1 - 2007.12 (now truncated to 1964.1-2003.12)
 ### ydata (return) is from 1964.1 - 2003.12
 maxlag = 25
 
@@ -87,10 +87,10 @@ ggplot(data=ydata, aes(x=xx, y=yr2)) + geom_line() + geom_vline(xintercept=xx[l]
   scale_x_continuous(breaks = seq(1964, 2003, by=3)) +
   xlab("Year") + ylab("Excess Bond Return (yr2)")
 
-aic.trend = adf.auto(as.data.frame(ydata[,-5]), criteria = "AIC")
-bic.trend = adf.auto(as.data.frame(ydata[,-5]), criteria = "BIC")
-aic.drift = adf.drift(as.data.frame(ydata[,-5]), criteria = "AIC")
-bic.drift = adf.drift(as.data.frame(ydata[,-5]), criteria = "BIC")
+aic.trend = adf.auto(as.data.frame(ydata), criteria = "AIC")
+bic.trend = adf.auto(as.data.frame(ydata), criteria = "BIC")
+aic.drift = adf.drift(as.data.frame(ydata), criteria = "AIC")
+bic.drift = adf.drift(as.data.frame(ydata), criteria = "BIC")
 adftests = rbind(cbind(aic.trend, bic.trend), cbind(aic.drift, bic.drift)) 
 ```
 
@@ -134,6 +134,7 @@ for (i in 2:5) {
 }
 write.csv(sum.total, paste0("/Users/stanza/documents/github/lasso/ng/yr2345.csv"))
 write.csv(mses, paste0("/Users/stanza/documents/github/lasso/ng/mse_yr.csv"))
+trace3.ng$plot + labs(caption = "yr5, LASSO 3")
 ```
 
 
@@ -168,7 +169,51 @@ write.csv(ar.list, paste0("/Users/stanza/documents/github/lasso/ng/ar.csv"))
 ar.table = cbind(p, mse)
 colnames(ar.table) = c("Lags chosen by AIC", "M.S.E")
 rownames(ar.table) = paste0("yr", 2:5)
-pander(ar.table, caption = "AR")
+#pander(ar.table, caption = "AR")
+```
+
+```{r include=F, message=F, warning=F, echo=F, eval=F}
+# this chunk used to calculate M.S.E with only sig lags AR
+yr = yr2 %>% scale()
+  y = lag0(maxlag = 13, yr) 
+  x = lags(maxlag = 13, yr) 
+############### only sig lags #############################################################
+x = x[, which( substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) == "lag1" |
+                 substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) =="lag2" |
+                 substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) =="lag5" |
+                 substr(colnames(x), nchar(colnames(x))-4, nchar(colnames(x))) =="lag12" |
+                 substr(colnames(x), nchar(colnames(x))-4, nchar(colnames(x))) =="lag13")]
+############### only sig lags #############################################################
+  l = ceiling(length(y)*0.8)
+  y.train = y[1:l]
+  y.test = y[(l+1):length(y)]
+  x.train = x[1:l, ] 
+  x.test = x[(l+1):dim(x)[1], ] %>% as.data.frame()
+  arols = lm(y.train ~ x.train)
+  cf = as.data.frame(lapply(arols$coefficients, rep, dim(x.test)[1])) # generate coef matrix
+  fit.temp = cf[,-1] * x.test 
+  fit.ar = rowSums(fit.temp) + cf[,1]
+  out.mse.ar = mean((y.test-fit.ar)^2)
+  out.mse.ar
+```
+
+
+```{r include=T, message=F, warning=F, echo=F}
+# plot of interest
+model = train1.ng$lasso
+
+  plot.lasso <- rbind(lambda.seq, coef(model)[-1,]) %>% t() %>%
+    as.matrix() %>% as.data.frame(stringsAsFactors = F)
+  colnames(plot.lasso)[1] <- "lambda"
+  plot.lasso <- plot.lasso[, colnames(plot.lasso)=="yr.lag2" | colnames(plot.lasso)=="yr.lag3" | colnames(plot.lasso)=="yr.lag12" | colnames(plot.lasso)=="yr.lag13" | colnames(plot.lasso)=="yr.lag14" | colnames(plot.lasso)=="yr.lag24" | colnames(plot.lasso)=="yr.lag25" | colnames(plot.lasso)=="lambda"]
+  melt.lasso <- melt(plot.lasso, id = "lambda")
+ggplot(melt.lasso, aes(x= lambda, y= value, color= variable))+
+    geom_line() + theme(legend.position = "none") +
+    labs(x='lambda', y='coefficients') + 
+    ggtitle("Trace plot of the y lags") + 
+    geom_text(data=subset(melt.lasso, lambda==0),
+                    aes(label= variable, color=variable)) + 
+  geom_vline(xintercept = train1.ng$lambda) + xlim(0, 0.2)
 ```
 
 

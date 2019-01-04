@@ -1,0 +1,175 @@
+---
+title: "Data-driven Lambda for the LASSO"
+author: "Shuofan Zhang"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: pdf_document
+---
+
+In this report, only the significant lags chosen by AR were included in the X matrix.
+
+
+Since the plots for yr2, yr3, yr4 and yr5 are similar, so here I just plotted yr2.
+
+
+The M.S.E of the training dataset increases with $\lambda$, so it is not feasible to choose a $\lambda$ according to the performance in training dataset.
+
+
+Two solutions:
+
+1, Same as before, separate the data set into training set (80%) and test set (20%); then choose $\lambda$ according to the smallest M.S.E in the test set directly and use it for the comparison.
+
+2, Separate the data set into three sets, training (60%), validation (20%) and test (20%); then choose $\lambda$ according to the smallest M.S.E in the validation set, use the M.S.E from the test set for comparison.
+
+\newpage
+
+* LASSO 1  
+
+
+```{r, include=T, echo=F, warning=F, 	message = FALSE}
+library("glmnet")
+library("reshape2")
+library("cellranger")
+library("tidyverse")
+library("knitr")
+library("ggrepel")
+library("pander")
+library("kableExtra")
+library("tseries")
+library("urca")
+library("lmtest")
+library("zoo")
+load("/Users/stanza/documents/github/lasso/ng/ngdata.RData")
+source("/Users/stanza/documents/github/lasso/fun.R")
+maxlag = 25
+lambda.seq <- seq(0.5, 0, -0.0025)
+```
+
+<!--
+############### only sig lags #############################################################
+x = x[, which( substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) == "lag1" |
+                 substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) =="lag2" |
+                 substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) =="lag3" |
+                 substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) =="lag4" |
+                 substr(colnames(x), nchar(colnames(x))-4, nchar(colnames(x))) =="lag12" |
+                 substr(colnames(x), nchar(colnames(x))-4, nchar(colnames(x))) =="lag13" |
+                 substr(colnames(x), nchar(colnames(x))-4, nchar(colnames(x))) =="lag14" |
+                 substr(colnames(x), nchar(colnames(x))-4, nchar(colnames(x))) =="lag24" |
+                 substr(colnames(x), nchar(colnames(x))-4, nchar(colnames(x))) =="lag25" )]
+############### only sig lags #############################################################
+-->
+
+
+
+
+
+
+
+
+```{r, include=T, echo=F, warning=F, 	message = FALSE}
+# yr = yr2, LASSO 1
+yr = yr2[-1] %>% scale()
+data = ngraw
+tcode = t.ng
+y <- lag0(maxlag , yr) %>% as.numeric()# dependent variable (3-224=222), done
+y.lags <- lags(maxlag, yr)
+xtem = ngraw[-1,]
+xtem[ , tcode=="2"] <- apply( data[ , tcode=="2"], 2, diff )
+  colnames(xtem)[tcode=="2"] = 
+    paste0("D.", colnames(xtem)[tcode=="2"])
+xtem = lags(maxlag , xtem) %>% scale() 
+x = cbind(xtem, y.lags)  # explanatory variables (2-223=222), done
+############### only sig lags #############################################################
+x = x[, which( substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) == "lag1" |
+                 substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) =="lag2" |
+                 substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) =="lag5" |
+                 substr(colnames(x), nchar(colnames(x))-4, nchar(colnames(x))) =="lag12" |
+                 substr(colnames(x), nchar(colnames(x))-4, nchar(colnames(x))) =="lag13")]
+############### only sig lags #############################################################
+yr2lasso1 = ddriven.l(x=x, y=y)
+yr2lasso1$plot + labs(caption = "Path of M.S.E in two datasets against lambda, LASSO 1") + xlab("Lambda") + ylab("M.S.E")
+yr2lasso1 = ddriven.l1l2(x=x, y=y)
+yr2lasso1$plot + labs(caption = "Path of M.S.E in three datasets against lambda, LASSO 1") + xlab("Lambda") + ylab("M.S.E")
+t1 = trace.plot.table(yr2lasso1$lasso, lambda.seq = lambda.seq, lambda.fix = yr2lasso1$lambda.valid)
+```
+
+* LASSO 2  
+
+```{r, include=T, echo=F, warning=F, 	message = FALSE}
+# yr = yr2, LASSO 2
+yr = yr2 %>% scale()
+data = ngraw
+tcode = t.ng
+i0 = data[-(1:2) , tcode=="0"]
+di1 = apply(data[,tcode=="1"], 2, diff)
+di1 = di1[-1,]
+colnames(di1) = paste0("D.", colnames(di1))
+di2 = apply(data[,tcode=="2"], 2, diff)
+d2i2 = apply(di2, 2, diff)
+colnames(d2i2) = paste0("D2.", colnames(d2i2))
+xtem = cbind(i0, di1, d2i2) %>% scale()
+yr = yr[-(1:2)]
+y.lags <- lags(maxlag, yr)
+y = lag0(maxlag, yr) %>% as.numeric()
+xtem = lags(maxlag , xtem)  # x lost 2 obs
+x = cbind(y.lags, xtem)
+############### only sig lags #############################################################
+x = x[, which( substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) == "lag1" |
+                 substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) =="lag2" |
+                 substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) =="lag5" |
+                 substr(colnames(x), nchar(colnames(x))-4, nchar(colnames(x))) =="lag12" |
+                 substr(colnames(x), nchar(colnames(x))-4, nchar(colnames(x))) =="lag13")]
+############### only sig lags #############################################################
+yr2lasso2 = ddriven.l(x=x, y=y)
+yr2lasso2$plot + labs(caption = "Path of M.S.E in two datasets against lambda, LASSO 2") + xlab("Lambda") + ylab("M.S.E")
+yr2lasso2 = ddriven.l1l2(x=x, y=y)
+yr2lasso2$plot + labs(caption = "Path of M.S.E in three datasets against lambda, LASSO 2") + xlab("Lambda") + ylab("M.S.E")
+t2 = trace.plot.table(yr2lasso2$lasso, lambda.seq = lambda.seq, lambda.fix = yr2lasso2$lambda.valid)
+```
+
+* LASSO 3  
+
+```{r, include=T, echo=F, warning=F, 	message = FALSE}
+# yr = yr2, LASSO 3
+yr = yr2[-(1:2)] %>% scale() %>% as.matrix()
+  y = lag0(maxlag, yr) 
+  y.lags = lags(maxlag, yr)
+  i0 = data[ , tcode=="0"] # *
+  i1 = data[,tcode=="1"] # *
+  i2 = data[,tcode=="2"]
+  di1 = apply(i1, 2, diff) # *
+  di2 = apply(i2, 2, diff) # *
+  d2i2 = apply(di2, 2, diff) # *
+  colnames(di1) = paste0("D.", colnames(di1))
+  colnames(di2) = paste0("D.", colnames(di2))
+  colnames(d2i2) = paste0("D2.", colnames(d2i2))
+  xtem = cbind(i0[-(1:2),] , di1[-1,] , d2i2) %>% scale()
+  xtem = lags(maxlag, xtem)
+  xtem2 = cbind( i1[-(1:2),] , di2[-1,]) %>% scale()
+  xtem2 = lag1(maxlag, xtem2)
+  x = cbind(xtem, xtem2, y.lags)
+############### only sig lags #############################################################
+x = x[, which( substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) == "lag1" |
+                 substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) =="lag2" |
+                 substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) =="lag5" |
+                 substr(colnames(x), nchar(colnames(x))-4, nchar(colnames(x))) =="lag12" |
+                 substr(colnames(x), nchar(colnames(x))-4, nchar(colnames(x))) =="lag13")]
+############### only sig lags #############################################################
+yr2lasso3 = ddriven.l(x=x, y=y)
+yr2lasso3$plot + labs(caption = "Path of M.S.E in two datasets against lambda, LASSO 3") + xlab("Lambda") + ylab("M.S.E")
+yr2lasso3 = ddriven.l1l2(x=x, y=y)
+yr2lasso3$plot + labs(caption = "Path of M.S.E in three datasets against lambda, LASSO 3") + xlab("Lambda") + ylab("M.S.E")
+t3 = trace.plot.table(yr2lasso3$lasso, lambda.seq = lambda.seq, lambda.fix = yr2lasso3$lambda.valid)
+```
+
+```{r, include=T, echo=F, warning=F, 	message = FALSE}
+tt = sumtable(t1, t2, t3)
+colnames(tt) = c("variable", "LASSO 1", "LASSO 2", "LASSO 3")
+pander(tt, caption = "Variables selected by the LASSO with data driven lambda (valid) for yr2")
+```
+
+
+
+
+
+
+

@@ -1,0 +1,81 @@
+
+How to choose $\lambda$ when use adaptive LASSO.
+
+
+```{r, include=T, echo=F, warning=F, 	message = FALSE}
+library("glmnet")
+library("reshape2")
+library("cellranger")
+library("tidyverse")
+library("knitr")
+library("ggrepel")
+library("pander")
+library("kableExtra")
+library("tseries")
+library("urca")
+library("lmtest")
+library("zoo")
+load("/Users/stanza/documents/github/lasso/ng/ngdata.RData")
+source("/Users/stanza/documents/github/lasso/fun.R")
+  maxlag = 25
+  lambda.seq <- seq(1.5, 0, -0.01)
+  data = ngraw
+  tcode = t.ng
+  yr = yr2
+  yr = yr[-1] %>% scale()
+  y <- lag0(maxlag , yr) %>% as.numeric()# dependent variable (3-224=222), done
+  y.lags <- lags(maxlag, yr)
+  xtem = data[-1,]
+  xtem[ , tcode=="2"] <- apply( data[ , tcode=="2"], 2, diff )
+  colnames(xtem)[tcode=="2"] = 
+    paste0("D.", colnames(xtem)[tcode=="2"])
+  xtem = lags(maxlag , xtem) %>% scale() 
+  x = cbind(xtem, y.lags)  # explanatory variables (2-223=222), done
+  # train
+  l = ceiling(dim(x)[1]*0.8)
+  x.train = x[1:l,] 
+  x.test = x[(l+1):dim(x)[1] , ]
+  y.train = y[1:l]
+  y.test = y[(l+1):length(y)]
+  ridge1_cv <- cv.glmnet(x = x.train, y = y.train,
+                       type.measure = "mse", nfold = 10, alpha = 0)
+  best_ridge_coef <- as.numeric(coef(ridge1_cv, s = ridge1_cv$lambda.min))[-1]
+  # fit model, collect data
+  #alasso1 <- glmnet(x = x.train, y = y.train, alpha = 1, penalty.factor = 1 / abs(best_ridge_coef), lambda= lambda.seq)
+  alasso1 <- cv.glmnet(type.measure = "mse", x = x.train, y = y.train, alpha = 1, penalty.factor = 1 / abs(best_ridge_coef), lambda = lambda.seq)
+  plot(alasso1)
+  
+  p.train = dim(x.train)[2]
+  n.train = dim(x.train)[1]
+  #lambda.fix = sqrt(log( p.train ) / n.train )
+  lambda.fix = alasso1$lambda.min
+  fitted = predict(alasso1 , s=lambda.seq[which.min(abs(lambda.seq-lambda.fix))] , newx = x.test)
+  out.mse = mean((y.test-fitted)^2)
+  
+  
+```
+
+
+model = alasso1
+  
+  plot.lasso <- rbind(lambda.seq, coef(model)[-1,]) %>% t() %>%
+    as.matrix() %>% as.data.frame(stringsAsFactors = F)
+  colnames(plot.lasso)[1] <- "lambda"
+  melt.lasso <- melt(plot.lasso, id = "lambda")
+  coef.fix <- subset(melt.lasso, lambda == 
+                       lambda[which.min(abs(lambda - lambda.fix))] &
+                       value != 0)
+  rownames(coef.fix) <- c()
+  plot <- ggplot(melt.lasso, aes(x= lambda, y= value, color= variable))+
+    geom_line() + theme(legend.position = "none") +
+    labs(x='lambda', y='coefficients') + 
+    geom_text_repel(data=subset(melt.lasso, lambda.seq == 
+                                  lambda.seq[which.min(abs(lambda.seq-lambda.fix))] &
+                                  value != 0), aes(label= variable, color=variable)) + 
+    ggtitle("Coeffcients trace plot") 
+  table = kable(coef.fix[,(2:3)],
+                caption = "Non-zero Coefficients with fixed lambda")
+  list = list("plot"=plot, "table"= table, "coef" = coef.fix)
+
+
+

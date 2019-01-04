@@ -213,6 +213,7 @@ sumtable <- function(t1, t2, t3){# t1, t2, t3 are the outputs from trace functio
 }
 
 
+
 ng1train <- function(data,  yr, tcode){
   yr = yr[-1] %>% scale()
   y <- lag0(maxlag , yr) %>% as.numeric()# dependent variable (3-224=222), done
@@ -229,12 +230,12 @@ ng1train <- function(data,  yr, tcode){
   x.test = x[(l+1):dim(x)[1] , ]
   y.train = y[1:l]
   y.test = y[(l+1):length(y)]
-  p.train = dim(x.train)[2]
-  n.train = dim(x.train)[1]
-  lambda.train = sqrt(log( p.train ) / n.train )
+  p.train = dim(x.train)[2] 
+  n.train = dim(x.train)[1] 
+  lambda.train = sqrt(log( p.train ) / n.train ) 
   # fit model, collect data
-  lasso = glmnet(x.train, y.train, alpha=1, thresh=1E-7, lambda= lambda.seq, maxit = 10^9)
-  fitted = predict(lasso , s=lambda.seq[which.min(abs(lambda.seq-lambda.train))] , newx = x.test)
+  lasso = glmnet(x.train, y.train, alpha = 1, thresh = 1E-7, lambda = lambda.seq, maxit = 10^9)
+  fitted = predict(lasso , s=lambda.seq[which.min(abs(lambda.seq-lambda.train))] , newx = x.test) #10
   out.mse = mean((y.test-fitted)^2)
   list = list(lasso=lasso, mse=out.mse, lambda = lambda.train)
   return(list)
@@ -292,7 +293,6 @@ ng3train <- function(data, tcode, yr){
   xtem2 = cbind( i1[-(1:2),] , di2[-1,]) %>% scale()
   xtem2 = lag1(maxlag, xtem2)
   x = cbind(xtem, xtem2, y.lags)
-  #x = cbind(xtem, xtem2) %>% scale()
   # train
   l = ceiling(dim(x)[1]*0.8)
   x.train = x[1:l,] 
@@ -310,7 +310,16 @@ ng3train <- function(data, tcode, yr){
   return(list)
 }
 
-
+############### only sig lags #############################################################
+#x = x[, which( substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) == "lag1" |
+#                 substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) =="lag2" |
+#                 substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) =="lag3" |
+#                 substr(colnames(x), nchar(colnames(x))-4, nchar(colnames(x))) =="lag14" |
+#                 substr(colnames(x), nchar(colnames(x))-4, nchar(colnames(x))) =="lag12" |
+#                 substr(colnames(x), nchar(colnames(x))-4, nchar(colnames(x))) =="lag13" |
+#                 substr(colnames(x), nchar(colnames(x))-4, nchar(colnames(x))) =="lag24" |
+#                 substr(colnames(x), nchar(colnames(x))-4, nchar(colnames(x))) =="lag25")]
+############### only sig lags #############################################################
 
 #### GDP #### out-of-sample MSE ######## rolling window estimation #######
 GDP1train <- function(data, tcode){
@@ -637,9 +646,72 @@ trace.interest <- function(model, lambda.seq) {
   return(plot)
 }
 
+ddriven.l = function(x, y){
+  l = ceiling(nrow(x)*0.8)
+  x.train = x[1:l,] 
+  x.test = x[(l+1):nrow(x) , ]
+  y.train = y[1:l]
+  y.test = y[(l+1):length(y)]
+  lasso = glmnet(x.train, y.train, alpha = 1, thresh = 1E-7, lambda = lambda.seq, maxit = 10^9)
+  fitted.in = list()
+  fitted.out = list()
+  mse.in = vector(length = length(lambda.seq))
+  mse.out = vector(length = length(lambda.seq))
+  for (i in 1:length(lambda.seq)) {
+    fitted.in[[i]] = predict(lasso, s=lambda.seq[i] , newx = x.train)
+    fitted.out[[i]] = predict(lasso, s=lambda.seq[i] , newx = x.test)
+    mse.in[i] = mean((y.train-fitted.in[[i]])^2)
+    mse.out[i] = mean((y.test-fitted.out[[i]])^2)
+  }
+  idx.in = which.min(mse.in)
+  idx.out = which.min(mse.out)
+  lambda.in = lambda.seq[idx.in]
+  lambda.out = lambda.seq[idx.out]
+  mse.plot = cbind(lambda.seq[-201], mse.in[-201], mse.out[-201]) %>% as.data.frame()
+  colnames(mse.plot) = c("lambda.seq", "mse.in", "mse.out")
+  mse.plot = melt(mse.plot, id = "lambda.seq")
+  plot = ggplot(mse.plot, aes(x=lambda.seq, y=value)) + 
+    geom_point(aes(color=variable), size = 1) +
+    geom_vline(xintercept = lambda.out)
+  list = list(plot = plot, lambda.in = lambda.in, lambda.out = lambda.out, 
+              mse.in=mse.in[idx.in], mse.out=mse.out[idx.out], lasso = lasso)
+}
 
-
-
+ddriven.l1l2 = function(x, y){
+  l1 = ceiling(nrow(x)*0.6)
+  l2 = ceiling(nrow(x)*0.8)
+  x.train = x[1:l1,] 
+  y.train = y[1:l1]
+  x.valid = x[(l1+1):l2 , ]
+  y.valid = y[(l1+1):l2]
+  x.test = x[(l2+1):nrow(x) , ]
+  y.test = y[(l2+1):length(y)]
+  lasso = glmnet(x.train, y.train, alpha = 1, thresh = 1E-7, lambda = lambda.seq, maxit = 10^9)
+  fitted.train = list()
+  fitted.valid = list()
+  fitted.test = list()
+  mse.train = vector(length = length(lambda.seq))
+  mse.valid = vector(length = length(lambda.seq))
+  mse.test = vector(length = length(lambda.seq))
+  for (i in 1:length(lambda.seq)) {
+    fitted.train[[i]] = predict(lasso, s=lambda.seq[i] , newx = x.train)
+    fitted.valid[[i]] = predict(lasso, s=lambda.seq[i] , newx = x.valid)
+    fitted.test[[i]] = predict(lasso, s=lambda.seq[i] , newx = x.test)
+    mse.train[i] = mean((y.train-fitted.train[[i]])^2)
+    mse.valid[i] = mean((y.valid-fitted.valid[[i]])^2)
+    mse.test[i] = mean((y.test-fitted.test[[i]])^2)
+  }
+  idx.valid = which.min(mse.valid)
+  lambda.valid = lambda.seq[idx.valid]
+  mse.plot = cbind(lambda.seq[-201], mse.train[-201], mse.valid[-201], mse.test[-201]) %>% as.data.frame()
+  colnames(mse.plot) = c("lambda.seq", "mse.train", "mse.valid", "mse.test")
+  mse.plot = melt(mse.plot, id = "lambda.seq")
+  plot = ggplot(mse.plot, aes(x=lambda.seq, y=value)) + 
+    geom_point(aes(color=variable), size = 1) +
+    geom_vline(xintercept = lambda.valid)
+  list = list(plot = plot, lambda.valid = lambda.valid, 
+              mse.out=mse.test[idx.valid], lasso = lasso)
+}
 
 
 
