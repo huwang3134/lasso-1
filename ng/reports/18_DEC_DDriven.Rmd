@@ -20,6 +20,22 @@ Two solutions:
 
 2, Separate the data set into three sets, training (60%), validation (20%) and test (20%); then choose $\lambda$ according to the smallest M.S.E in the validation set, use the M.S.E from the test set for comparison.
 
+(Continued from 12th Dec):
+
+1, When we have high-dimentional data, and set *singular.ok = TRUE*, then run OLS with *lm* function in R, the x matrix will be truncated to have an appropriate number of columns. Example: n=100, p=200, the $100^{th}$-$200^{th}$ columns will be removed before running the regression. The actual data used in the regression will be n=100, p=99.
+
+2, When we have high-dimentional data, and set $\lambda$ as a series of values including zero, then run LASSO with glmnet function in R, it gives non-zero estimations to every variables (when $\lambda=0$). In fact, the function does not allow $\lambda=0$ so it uses some very small value instead. (verified by data experiments, code check is ongoing)
+
+3, When the data is not high-dimentional, the estimations of LASSO (when $\lambda=0$) becomes closer and closer to the OLS estimations with decreasing "thresh" values.
+
+some references:
+
+[How Correlations Influence Lasso Prediction](https://arxiv.org/pdf/1204.1605.pdf)
+
+This paper argues correlation is not problematic for LASSO prediction, but it has influence on suitable $\lambda$. The higher the correlation, the smaller the tuning parameter.
+
+
+
 \newpage
 
 * LASSO 1  
@@ -61,16 +77,12 @@ x = x[, which( substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) == 
 
 
 
-
-
-
-
 ```{r, include=T, echo=F, warning=F, 	message = FALSE}
 # yr = yr2, LASSO 1
-yr = yr2[-1] %>% scale()
+yr = yr2[-1] %>% scale() # delete the first obs because of first differencing I(2) variables
 data = ngraw
 tcode = t.ng
-y <- lag0(maxlag , yr) %>% as.numeric()# dependent variable (3-224=222), done
+y <- lag0(maxlag , yr) %>% as.numeric()# dependent variable done
 y.lags <- lags(maxlag, yr)
 xtem = ngraw[-1,]
 xtem[ , tcode=="2"] <- apply( data[ , tcode=="2"], 2, diff )
@@ -85,6 +97,15 @@ x = x[, which( substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) == 
                  substr(colnames(x), nchar(colnames(x))-4, nchar(colnames(x))) =="lag12" |
                  substr(colnames(x), nchar(colnames(x))-4, nchar(colnames(x))) =="lag13")]
 ############### only sig lags #############################################################
+OLS = lm(y ~ x, singular.ok = TRUE)
+coef0_LASSO = glmnet(x, y, alpha = 1, thresh = 1E-15, lambda = lambda.seq, maxit = 10^9)
+lambda.non <- seq((0.5+10^-5), 10^-5, -0.0025)
+coef_LASSO = glmnet(x, y, alpha = 1, thresh = 1E-15, lambda = lambda.non, maxit = 10^9)
+coef0 = coef(coef0_LASSO)[-1,201]
+coefnon = coef(coef_LASSO)[-1,201]
+cc = cbind(as.vector(coef0),  as.vector(coefnon)) %>% as.data.frame()
+ggplot(data = cc, aes(x=V1, y=V2)) + geom_point()
+##################### compare OLS with LASSO end #############################################
 yr2lasso1 = ddriven.l(x=x, y=y)
 yr2lasso1$plot + labs(caption = "Path of M.S.E in two datasets against lambda, LASSO 1") + xlab("Lambda") + ylab("M.S.E")
 yr2lasso1 = ddriven.l1l2(x=x, y=y)
