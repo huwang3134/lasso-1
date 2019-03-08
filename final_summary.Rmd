@@ -1,0 +1,15 @@
+---
+title: "Summary of Shuofan's study on the LASSO"
+author: "Shuofan Zhang"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: pdf_document
+---
+
+# Theory
+
+The key question I try to answer is: 
+
+Is the LASSO consistent?
+
+Two types of consistency are related to the LASSO, in terms of parameter estimation and variable selection respectively.  
+

@@ -175,14 +175,15 @@ rownames(ar.table) = paste0("yr", 2:5)
 ```{r include=F, message=F, warning=F, echo=F, eval=F}
 # this chunk used to calculate M.S.E with only sig lags AR
 yr = yr2 %>% scale()
-  y = lag0(maxlag = 13, yr) 
-  x = lags(maxlag = 13, yr) 
+  y = lag0(maxlag = 25, yr) 
+  x = lags(maxlag = 25, yr) 
+
 ############### only sig lags #############################################################
-x = x[, which( substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) == "lag1" |
-                 substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) =="lag2" |
-                 substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) =="lag5" |
-                 substr(colnames(x), nchar(colnames(x))-4, nchar(colnames(x))) =="lag12" |
-                 substr(colnames(x), nchar(colnames(x))-4, nchar(colnames(x))) =="lag13")]
+#x = x[, which( substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) == "lag1" |
+#                 substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) =="lag2" |
+#                 substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) =="lag5" |
+#                 substr(colnames(x), nchar(colnames(x))-4, nchar(colnames(x))) =="lag12" |
+#                 substr(colnames(x), nchar(colnames(x))-4, nchar(colnames(x))) =="lag13")]
 ############### only sig lags #############################################################
   l = ceiling(length(y)*0.8)
   y.train = y[1:l]
@@ -195,6 +196,8 @@ x = x[, which( substr(colnames(x), nchar(colnames(x))-3, nchar(colnames(x))) == 
   fit.ar = rowSums(fit.temp) + cf[,1]
   out.mse.ar = mean((y.test-fit.ar)^2)
   out.mse.ar
+  res.ar.yr2.all = (y.test-fit.ar)^2
+  save(res.ar.yr2.all, file="/Users/stanza/documents/github/lasso/ng/res_all.RData")
 ```
 
 

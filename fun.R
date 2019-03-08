@@ -674,7 +674,8 @@ ddriven.l = function(x, y){
     geom_point(aes(color=variable), size = 1) +
     geom_vline(xintercept = lambda.out)
   list = list(plot = plot, lambda.in = lambda.in, lambda.out = lambda.out, 
-              mse.in=mse.in[idx.in], mse.out=mse.out[idx.out], lasso = lasso)
+              mse.in=mse.in[idx.in], mse.out=mse.out[idx.out], lasso = lasso, 
+              res = (y.test-fitted.out[[idx.out]])^2)
 }
 
 ddriven.l1l2 = function(x, y){
@@ -710,7 +711,8 @@ ddriven.l1l2 = function(x, y){
     geom_point(aes(color=variable), size = 1) +
     geom_vline(xintercept = lambda.valid)
   list = list(plot = plot, lambda.valid = lambda.valid, 
-              mse.out=mse.test[idx.valid], lasso = lasso)
+              mse.out=mse.test[idx.valid], lasso = lasso,
+              res = (y.test-fitted.test[[idx.valid]])^2)
 }
 
 
